@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 
 interface FormData {
@@ -241,7 +242,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     text += `New Total Batch Weight: ${newTotalBatchWeight.toFixed(3)}\n`;
     text += `Adjusted Components:\n`;
     adjustedBatchResults.forEach(comp => {
-      text += `  - ${comp.name}: ${isNaN(comp.newScaledWeight) ? 'Invalid Original' : comp.newScaledWeight.toFixed(3)} (Target %: ${isNaN(comp.percentage) ? 'N/A' : comp.percentage.toFixed(2)}%)\n`;
+      text += `  - ${comp.name}: ${isNaN(comp.newScaledWeight) ? "Invalid Original" : comp.newScaledWeight.toFixed(3)} (Target %: ${isNaN(comp.percentage) ? 'N/A' : comp.percentage.toFixed(2)}%)\n`;
     });
     return text;
   }, [newTotalBatchWeight, adjustedBatchResults, originalTotalBatchWeightStr, limitingComponentIndexStr, calculatedOriginalComponents, availableAmountLimitingComponentStr]);
@@ -323,7 +324,9 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
+                                    <button type="button" aria-label="Percentage sum warning">
+                                      <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
+                                    </button>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                     <p>Total percentage of components does not sum to 100%. Batch weights may not be as expected.</p>
@@ -510,3 +513,5 @@ const ShortBatchAdjustmentPage: React.FC = () => {
 };
 
 export default ShortBatchAdjustmentPage;
+
+    
