@@ -11,7 +11,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const IconComponent = calculator.icon;
 
   return (
-    <Link href={`/calculators/${calculator.slug}`} className="group block" aria-label={`Open ${calculator.name} calculator`}>
+    <Link href={`/${calculator.slug}`} className="group block" aria-label={`Open ${calculator.name} calculator`}>
       <Card className="h-full transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 animate-fadeIn">
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
