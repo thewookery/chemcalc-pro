@@ -8,23 +8,21 @@ export interface CalculatorMeta {
 
 // For use in the Short Batch Adjustment calculator results
 export interface AdjustedComponent {
-  id: string; // Or index
   name: string;
-  originalCalculatedWeight: number; // The original weight calculated from percentage
-  newScaledWeight: number; // Adjusted weight
-  percentage: number; // Percentage in the batch (should match input)
+  standardPercentage: number; // The standard % from the batch ticket
+  newRequiredWeight: number;   // The calculated weight for the adjusted batch
 }
 
 // For storing components in a saved batch configuration
 export interface SavedBatchComponent {
   name: string;
-  percentage: number; // User-defined target percentage
+  standardPercentage: number; // Standard percentage on the batch ticket
 }
 
 export interface SavedBatch {
   id: string; // unique id for the saved batch
   name: string; // user-defined name for the batch
-  originalTotalBatchWeight: number;
-  components: SavedBatchComponent[];
+  originalStandardTotalBatchWeight: number; // The total weight of a full, standard batch
+  components: SavedBatchComponent[]; // List of components with their standard percentages
   createdAt: string; // ISO date string
 }
