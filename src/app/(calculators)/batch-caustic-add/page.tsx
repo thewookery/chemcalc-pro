@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -10,7 +11,10 @@ interface BatchCausticResult {
   causticWeight: number;
 }
 
-const CAUSTIC_PERCENTAGES = [0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15];
+const CAUSTIC_PERCENTAGES = [
+  0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20,
+  0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.30
+];
 
 const BatchCausticAddCalculatorPage: React.FC = () => {
   const [batchWeight, setBatchWeight] = useState<string>('');
@@ -33,11 +37,11 @@ const BatchCausticAddCalculatorPage: React.FC = () => {
   
   const resultsToCopy = useMemo(() => {
     if (results.length === 0) return "";
-    let text = `Batch Caustic Add Calculation for Batch Weight: ${batchWeight} (units)\n\n`;
-    text += "Percentage | Caustic to Add (units)\n";
+    let text = `Batch Caustic Add Calculation for Batch Weight: ${batchWeight} pounds (lbs)\n\n`;
+    text += "Percentage | Caustic to Add (pounds)\n";
     text += "----------------------------------\n";
     results.forEach(res => {
-      text += `${res.percentage.toFixed(2)}%        | ${res.causticWeight.toFixed(4)} (units)\n`;
+      text += `${res.percentage.toFixed(2)}%        | ${res.causticWeight.toFixed(4)} pounds\n`;
     });
     return text;
   }, [batchWeight, results]);
@@ -46,7 +50,7 @@ const BatchCausticAddCalculatorPage: React.FC = () => {
   return (
     <CalculatorWrapper
       title="Batch Caustic Add Calculator"
-      description="Calculate the weight of caustic to add for various percentages (0.08% to 0.15%) based on total batch weight."
+      description="Calculate the weight of caustic to add for various percentages (0.08% to 0.30%) based on total batch weight."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
@@ -54,11 +58,11 @@ const BatchCausticAddCalculatorPage: React.FC = () => {
         <CommonInput
           id="batchWeightCaustic"
           label="Batch Weight"
-          unit="(e.g., lbs, kg)"
+          unit="pounds (lbs)"
           value={batchWeight}
           onChange={(e) => setBatchWeight(e.target.value)}
           placeholder="e.g., 50000"
-          tooltipText="Enter the total weight of the batch. Units for caustic added will match this unit."
+          tooltipText="Enter the total weight of the batch in pounds. Caustic added will also be in pounds."
         />
         {results.length > 0 && (
           <div className="mt-6">
@@ -74,7 +78,7 @@ const BatchCausticAddCalculatorPage: React.FC = () => {
                 {results.map((res) => (
                   <TableRow key={res.percentage}>
                     <TableCell className="font-medium">{res.percentage.toFixed(2)}%</TableCell>
-                    <TableCell>{res.causticWeight.toFixed(4)} (units)</TableCell>
+                    <TableCell>{res.causticWeight.toFixed(4)} pounds</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
