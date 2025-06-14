@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, PlusCircle, Save, Upload, AlertTriangle } from 'lucide-react';
+import { Trash2, PlusCircle, Save, Upload, AlertTriangle, PercentIcon } from 'lucide-react';
 import type { SavedBatch, AdjustedComponent, SavedBatchComponent } from '@/types';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -28,27 +28,31 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 
-
 interface FormData {
   originalTotalBatchWeight: string;
-  components: { name: string; weight: string }[]; // Form data for original components
+  components: { name: string; percentage: string }[];
   limitingComponentIndex: string;
   availableAmountLimitingComponent: string;
   saveBatchName: string;
 }
 
-const SAVED_BATCHES_KEY = 'chemcalc_savedShortBatches';
+interface CalculatedOriginalComponent {
+  name: string;
+  percentage: number;
+  originalWeight: number;
+}
+
+const SAVED_BATCHES_KEY = 'chemcalc_savedShortBatches_v2_percentage'; // Changed key to avoid conflicts
 
 const ShortBatchAdjustmentPage: React.FC = () => {
   const { toast } = useToast();
   const [savedBatches, setSavedBatches] = useLocalStorage<SavedBatch[]>(SAVED_BATCHES_KEY, []);
   const [selectedBatchToLoad, setSelectedBatchToLoad] = useState<string>('');
 
-
   const { register, control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       originalTotalBatchWeight: '',
-      components: [{ name: '', weight: '' }],
+      components: [{ name: '', percentage: '' }],
       limitingComponentIndex: '',
       availableAmountLimitingComponent: '',
       saveBatchName: '',
@@ -65,71 +69,111 @@ const ShortBatchAdjustmentPage: React.FC = () => {
   const limitingComponentIndexStr = watch('limitingComponentIndex');
   const availableAmountLimitingComponentStr = watch('availableAmountLimitingComponent');
 
+  const [calculatedOriginalComponents, setCalculatedOriginalComponents] = useState<CalculatedOriginalComponent[]>([]);
+  const [adjustedBatchResults, setAdjustedBatchResults] = useState<AdjustedComponent[]>([]);
   const [newTotalBatchWeight, setNewTotalBatchWeight] = useState<number | null>(null);
-  const [newComponentWeights, setNewComponentWeights] = useState<AdjustedComponent[]>([]);
+  const [totalOriginalPercentage, setTotalOriginalPercentage] = useState<number>(0);
 
   useEffect(() => {
     const originalTotalWt = parseFloat(originalTotalBatchWeightStr);
+    let currentTotalPercentage = 0;
+    const newCalculatedOriginals: CalculatedOriginalComponent[] = [];
+
+    if (!isNaN(originalTotalWt) && originalTotalWt > 0) {
+      watchedComponents.forEach(comp => {
+        const perc = parseFloat(comp.percentage);
+        if (!isNaN(perc) && perc >= 0) {
+          currentTotalPercentage += perc;
+          newCalculatedOriginals.push({
+            name: comp.name || '',
+            percentage: perc,
+            originalWeight: (originalTotalWt * perc) / 100,
+          });
+        } else {
+           newCalculatedOriginals.push({ // Push with NaN weight if percentage is invalid
+            name: comp.name || '',
+            percentage: NaN,
+            originalWeight: NaN,
+          });
+        }
+      });
+    } else {
+       watchedComponents.forEach(comp => {
+         const perc = parseFloat(comp.percentage);
+         newCalculatedOriginals.push({
+           name: comp.name || '',
+           percentage: isNaN(perc) ? NaN : perc,
+           originalWeight: NaN, // No total weight, so original weights are NaN
+         });
+         if(!isNaN(perc) && perc >=0) currentTotalPercentage += perc;
+       });
+    }
+    setCalculatedOriginalComponents(newCalculatedOriginals);
+    setTotalOriginalPercentage(currentTotalPercentage);
+  }, [originalTotalBatchWeightStr, watchedComponents]);
+
+
+  useEffect(() => {
     const limitCompIdx = parseInt(limitingComponentIndexStr, 10);
     const availableAmount = parseFloat(availableAmountLimitingComponentStr);
+    const originalTotalWtNum = parseFloat(originalTotalBatchWeightStr);
 
-    if (isNaN(originalTotalWt) || originalTotalWt <= 0 || watchedComponents.length === 0 || isNaN(limitCompIdx) || limitCompIdx < 0 || limitCompIdx >= watchedComponents.length) {
+    if (
+      isNaN(originalTotalWtNum) || originalTotalWtNum <= 0 ||
+      calculatedOriginalComponents.length === 0 ||
+      isNaN(limitCompIdx) || limitCompIdx < 0 || limitCompIdx >= calculatedOriginalComponents.length
+    ) {
+      setAdjustedBatchResults([]);
       setNewTotalBatchWeight(null);
-      setNewComponentWeights([]);
+      return;
+    }
+
+    const limitingComponent = calculatedOriginalComponents[limitCompIdx];
+    if (!limitingComponent || isNaN(limitingComponent.originalWeight) || limitingComponent.originalWeight < 0) {
+      setAdjustedBatchResults([]);
+      setNewTotalBatchWeight(null);
       return;
     }
     
-    const limitingComponent = watchedComponents[limitCompIdx];
-    if (!limitingComponent) { // Ensure limiting component exists
-        setNewTotalBatchWeight(null);
-        setNewComponentWeights([]);
-        return;
-    }
-    const originalLimitingWeight = parseFloat(limitingComponent.weight);
-
-    if (isNaN(originalLimitingWeight) || originalLimitingWeight <= 0 || isNaN(availableAmount) || availableAmount < 0) {
-       setNewTotalBatchWeight(null);
-       setNewComponentWeights([]);
-       return;
-    }
-    
-    const scaleFactor = availableAmount / originalLimitingWeight;
-    const newTotalWt = originalTotalWt * scaleFactor;
-    setNewTotalBatchWeight(newTotalWt);
-
-    const newComps: AdjustedComponent[] = watchedComponents.map((comp, index) => {
-      const originalCompWt = parseFloat(comp.weight);
-      let scaledWeight = NaN;
-      let percentageInNewBatch = NaN;
-
-      if (!isNaN(originalCompWt)) {
-        scaledWeight = originalCompWt * scaleFactor;
-        if (newTotalWt > 0 && !isNaN(scaledWeight)) {
-          percentageInNewBatch = (scaledWeight / newTotalWt) * 100;
-        } else if (newTotalWt === 0 && scaledWeight === 0) {
-          // If both are zero, percentage could be considered 0 or NaN.
-          // For display, showing what original % was might be more useful if batch size becomes 0.
-          // However, typically this means an invalid scenario for percentages.
-          // Let's try to match original % if total is 0 and original total was > 0
-           const originalTotalWtNum = parseFloat(originalTotalBatchWeightStr);
-           if (originalTotalWtNum > 0 && !isNaN(originalCompWt)) {
-             percentageInNewBatch = (originalCompWt / originalTotalWtNum) * 100;
-           } else {
-             percentageInNewBatch = 0; // default to 0 if cannot determine original
-           }
+    // If original limiting weight is 0, but available amount is > 0, it's an impossible scale up.
+    // If original limiting weight is 0 and available amount is 0, scale factor is effectively 1 (or NaN if we want to be strict, but 1 avoids division by zero for other non-zero components)
+    let scaleFactor: number;
+    if (limitingComponent.originalWeight === 0) {
+        if (availableAmount === 0) {
+            scaleFactor = 1; // No change if both are zero
+        } else {
+            // Trying to make something from nothing for the limiting component.
+            // This scenario implies that other components might scale up infinitely if their original weight was non-zero.
+            // Or, if we want to be strict, this is an invalid scenario. Let's treat it as no scaling.
+            toast({ title: "Warning", description: "Limiting component has 0 original weight. Cannot scale based on a positive available amount.", variant: "destructive" });
+            setAdjustedBatchResults([]);
+            setNewTotalBatchWeight(null);
+            return;
         }
-      }
-      
-      return {
-        id: String(index),
-        name: comp.name,
-        weight: scaledWeight,
-        percentage: percentageInNewBatch,
-      };
-    });
-    setNewComponentWeights(newComps);
+    } else {
+        if (isNaN(availableAmount) || availableAmount < 0) {
+             setAdjustedBatchResults([]);
+             setNewTotalBatchWeight(null);
+             return;
+        }
+        scaleFactor = availableAmount / limitingComponent.originalWeight;
+    }
 
-  }, [originalTotalBatchWeightStr, watchedComponents, limitingComponentIndexStr, availableAmountLimitingComponentStr]);
+
+    const newAdjustedResults: AdjustedComponent[] = calculatedOriginalComponents.map((comp, index) => ({
+      id: String(index),
+      name: comp.name,
+      originalCalculatedWeight: comp.originalWeight,
+      newScaledWeight: !isNaN(comp.originalWeight) ? comp.originalWeight * scaleFactor : NaN,
+      percentage: comp.percentage, // This is the user-inputted target percentage
+    }));
+
+    setAdjustedBatchResults(newAdjustedResults);
+    const newTotal = newAdjustedResults.reduce((sum, comp) => sum + (isNaN(comp.newScaledWeight) ? 0 : comp.newScaledWeight), 0);
+    setNewTotalBatchWeight(newTotal);
+
+  }, [calculatedOriginalComponents, limitingComponentIndexStr, availableAmountLimitingComponentStr, originalTotalBatchWeightStr, toast]);
+
 
   const handleSaveBatch = () => {
     const batchName = watch('saveBatchName');
@@ -145,7 +189,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     const currentBatchData: Omit<SavedBatch, 'id' | 'createdAt'> = {
       name: batchName.trim(),
       originalTotalBatchWeight: parseFloat(originalTotalBatchWeightStr) || 0,
-      components: watchedComponents.map(c => ({ name: c.name, weight: parseFloat(c.weight) || 0 })),
+      components: watchedComponents.map(c => ({ name: c.name, percentage: parseFloat(c.percentage) || 0 })),
     };
     
     const newSavedBatch: SavedBatch = {
@@ -155,7 +199,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     };
 
     setSavedBatches([...savedBatches, newSavedBatch]);
-    setValue('saveBatchName', '');
+    setValue('saveBatchName', ''); // Clear input after save
     toast({ title: "Success", description: `Batch "${newSavedBatch.name}" saved.` });
   };
   
@@ -164,7 +208,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     if (batchToLoad) {
       reset({ 
         originalTotalBatchWeight: String(batchToLoad.originalTotalBatchWeight),
-        components: batchToLoad.components.map(c => ({ name: c.name, weight: String(c.weight) })),
+        components: batchToLoad.components.map(c => ({ name: c.name, percentage: String(c.percentage) })),
         limitingComponentIndex: '', 
         availableAmountLimitingComponent: '',
         saveBatchName: '',
@@ -179,39 +223,33 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     toast({ title: "Batch Deleted", description: "The selected batch has been removed." });
   };
 
-  const formula = "New Weight = Original Weight * (Available Limiting / Original Limiting). Percentages are maintained.";
+  const formula = "Calc. Original Weight = (Total Weight * %) / 100. New Scaled Weight = Calc. Original Weight * (Available Limiting / Original Limiting of selected component). Percentages are user-defined and maintained.";
 
   const resultsToCopy = useMemo(() => {
-    if (newTotalBatchWeight === null || newComponentWeights.length === 0) return "";
-    let text = `Short Batch Adjustment Results:\n`;
+    if (newTotalBatchWeight === null || adjustedBatchResults.length === 0) return "";
+    let text = `Short Batch Adjustment Results (Percentage Based):\n`;
     text += `Original Total Batch Weight: ${originalTotalBatchWeightStr}\n`;
     
-    text += `Original Components:\n`;
-    const originalTotalWtNumForCopy = parseFloat(originalTotalBatchWeightStr);
-    watchedComponents.forEach((comp, index) => {
-      const originalCompWeightNum = parseFloat(comp.weight);
-      let originalPercStr = "N/A";
-      if (originalTotalWtNumForCopy > 0 && !isNaN(originalCompWeightNum) && originalCompWeightNum >=0) {
-        originalPercStr = `${((originalCompWeightNum / originalTotalWtNumForCopy) * 100).toFixed(2)}%`;
-      }
-      text += `  - ${comp.name || `Component ${index+1}`}: ${comp.weight} (Original %: ${originalPercStr})\n`;
+    text += `Original Components (User-defined %):\n`;
+    calculatedOriginalComponents.forEach((comp, index) => {
+      text += `  - ${comp.name || `Component ${index+1}`}: ${isNaN(comp.percentage) ? 'N/A' : comp.percentage.toFixed(2)}% (Calculated Original Wt: ${isNaN(comp.originalWeight) ? 'N/A' : comp.originalWeight.toFixed(3)})\n`;
     });
 
-    const limitingCompFromWatch = watchedComponents[parseInt(limitingComponentIndexStr)];
-    text += `Limiting Component: ${limitingCompFromWatch?.name || 'N/A'} (Original: ${limitingCompFromWatch?.weight || 'N/A'}, Available: ${availableAmountLimitingComponentStr})\n`;
+    const limitingCompOriginal = calculatedOriginalComponents[parseInt(limitingComponentIndexStr)];
+    text += `Limiting Component: ${limitingCompOriginal?.name || 'N/A'} (Original Calc. Wt: ${limitingCompOriginal?.originalWeight?.toFixed(3) || 'N/A'}, Available: ${availableAmountLimitingComponentStr})\n`;
     text += `--- Adjusted Batch ---\n`;
     text += `New Total Batch Weight: ${newTotalBatchWeight.toFixed(3)}\n`;
     text += `Adjusted Components:\n`;
-    newComponentWeights.forEach(comp => {
-      text += `  - ${comp.name}: ${isNaN(comp.weight) ? 'Invalid Original' : comp.weight.toFixed(3)} (New %: ${isNaN(comp.percentage) ? 'N/A' : comp.percentage.toFixed(2)}%)\n`;
+    adjustedBatchResults.forEach(comp => {
+      text += `  - ${comp.name}: ${isNaN(comp.newScaledWeight) ? 'Invalid Original' : comp.newScaledWeight.toFixed(3)} (Target %: ${isNaN(comp.percentage) ? 'N/A' : comp.percentage.toFixed(2)}%)\n`;
     });
     return text;
-  }, [newTotalBatchWeight, newComponentWeights, originalTotalBatchWeightStr, limitingComponentIndexStr, watchedComponents, availableAmountLimitingComponentStr]);
+  }, [newTotalBatchWeight, adjustedBatchResults, originalTotalBatchWeightStr, limitingComponentIndexStr, calculatedOriginalComponents, availableAmountLimitingComponentStr]);
 
   return (
     <CalculatorWrapper
-      title="Short Batch Adjustment Calculator"
-      description="Adjust all component weights proportionally for a shorter batch due to material shortage. Component percentages are maintained."
+      title="Short Batch Adjustment Calculator (Percentage Based)"
+      description="Input target percentages for components in an original batch. The calculator derives original weights. Then, adjust all component weights proportionally based on a limiting material, maintaining target percentages."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
@@ -228,19 +266,11 @@ const ShortBatchAdjustmentPage: React.FC = () => {
               errorMessage={errors.originalTotalBatchWeight?.message}
             />
 
-            <Label>Original Components</Label>
+            <Label>Original Components (Define by Target %)</Label>
             {fields.map((field, index) => {
-              const componentWeightStr = watch(`components.${index}.weight`);
-              const originalTotalWtNum = parseFloat(originalTotalBatchWeightStr);
-              const componentWeightNum = parseFloat(componentWeightStr);
-              let percentageDisplay = '- %';
-              if (originalTotalWtNum > 0 && !isNaN(componentWeightNum) && componentWeightNum >= 0) {
-                const perc = (componentWeightNum / originalTotalWtNum) * 100;
-                percentageDisplay = `${perc.toFixed(2)}%`;
-              }
-
+              const calculatedOrig = calculatedOriginalComponents[index];
               return (
-                <div key={field.id} className="flex items-start gap-2 p-3 border rounded-md bg-background/50">
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-start p-3 border rounded-md bg-background/50">
                   <div className="flex-grow space-y-1">
                     <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
                     <Input
@@ -251,37 +281,62 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                     />
                     {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
                   </div>
-                  <div className="w-1/4 space-y-1">
-                    <Label htmlFor={`components.${index}.weight`} className="text-xs">Weight</Label>
-                    <Input
-                      id={`components.${index}.weight`}
-                      type="number"
-                      step="any"
-                      placeholder="Weight"
-                      {...register(`components.${index}.weight`, { required: "Weight is required", valueAsNumber: true, min: {value: 0, message: "Cannot be negative"} })}
-                      className={cn("h-9 calculator-input text-input-foreground", errors.components?.[index]?.weight && "border-destructive")}
-                    />
-                    {errors.components?.[index]?.weight && <p className="text-xs text-destructive mt-1">{errors.components[index]?.weight?.message}</p>}
-                  </div>
-                  <div className="w-1/5 space-y-1 pt-1">
-                    <Label className="text-xs text-muted-foreground block text-center">Original %</Label>
-                    <div className="text-sm text-center h-9 flex items-center justify-center bg-muted/80 rounded-md px-2 text-muted-foreground">
-                      {percentageDisplay}
+                  
+                  <CommonInput
+                    id={`components.${index}.percentage`}
+                    label="Target %"
+                    unit="%"
+                    className="h-9 calculator-input text-input-foreground"
+                    placeholder="e.g., 25"
+                    {...register(`components.${index}.percentage`, { 
+                        required: "Percentage is required", 
+                        valueAsNumber: true, 
+                        min: {value: 0, message: "% >= 0"},
+                        max: {value: 100, message: "% <= 100"}
+                    })}
+                    errorMessage={errors.components?.[index]?.percentage?.message}
+                  />
+
+                  <div className="space-y-1 pt-1">
+                    <Label className="text-xs text-muted-foreground block">Calc. Orig. Wt.</Label>
+                    <div className="text-sm h-9 flex items-center bg-muted/80 rounded-md px-3 text-muted-foreground">
+                      {calculatedOrig && !isNaN(calculatedOrig.originalWeight) ? calculatedOrig.originalWeight.toFixed(3) : '-'}
                     </div>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="mt-5 self-center" aria-label="Remove component">
+
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="mt-5 self-center md:self-end" aria-label="Remove component">
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
               );
             })}
-            <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', weight: '' })}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Component
-            </Button>
+            <div className="flex justify-between items-center">
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', percentage: '' })}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Component
+                </Button>
+                <div className="text-sm font-medium">
+                    Total Original %: 
+                    <span className={cn("ml-1", totalOriginalPercentage !== 100 && (totalOriginalPercentage > 0 || watchedComponents.some(c => c.percentage)) ? "text-orange-500 font-bold" : "text-green-600 font-bold")}>
+                        {totalOriginalPercentage.toFixed(2)}%
+                    </span>
+                    {totalOriginalPercentage !== 100 && (totalOriginalPercentage > 0 || watchedComponents.some(c => c.percentage)) && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Total percentage of components does not sum to 100%. Batch weights may not be as expected.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
+            </div>
           </div>
         </div>
         
-        {watchedComponents.length > 0 && parseFloat(originalTotalBatchWeightStr) > 0 && (
+        {calculatedOriginalComponents.length > 0 && parseFloat(originalTotalBatchWeightStr) > 0 && totalOriginalPercentage > 0 && (
           <div>
             <h3 className="text-lg font-medium mb-2">Shortage Information</h3>
             <div className="space-y-4 p-4 border rounded-md bg-muted/30">
@@ -300,13 +355,13 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                         <SelectValue placeholder="Select limiting component" />
                       </SelectTrigger>
                       <SelectContent>
-                        {watchedComponents.map((comp, index) => (
+                        {calculatedOriginalComponents.map((comp, index) => (
                           <SelectItem 
                             key={index} 
                             value={String(index)} 
-                            disabled={!comp.name || isNaN(parseFloat(comp.weight)) || parseFloat(comp.weight) <=0 }
+                            disabled={!comp.name || isNaN(comp.originalWeight) || comp.originalWeight < 0} // Disable if original weight is invalid/negative
                           >
-                            {comp.name || `Component ${index + 1}`} ({parseFloat(comp.weight) > 0 ? `${comp.weight} units` : 'Invalid original weight'})
+                            {comp.name || `Component ${index + 1}`} (Calc. Orig. Wt: {!isNaN(comp.originalWeight) && comp.originalWeight >=0 ? `${comp.originalWeight.toFixed(3)} units` : 'Invalid % or Total Wt'})
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -324,13 +379,16 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                 tooltipText="The actual amount you have of the limiting component."
                 errorMessage={errors.availableAmountLimitingComponent?.message}
               />
-              { parseFloat(availableAmountLimitingComponentStr) > parseFloat(watchedComponents[parseInt(limitingComponentIndexStr)]?.weight) &&
-                !isNaN(parseFloat(availableAmountLimitingComponentStr)) && !isNaN(parseFloat(watchedComponents[parseInt(limitingComponentIndexStr)]?.weight)) &&
-                parseInt(limitingComponentIndexStr) >= 0 && parseInt(limitingComponentIndexStr) < watchedComponents.length && // ensure index is valid
+              { parseInt(limitingComponentIndexStr) >= 0 && parseInt(limitingComponentIndexStr) < calculatedOriginalComponents.length &&
+                calculatedOriginalComponents[parseInt(limitingComponentIndexStr)] &&
+                !isNaN(parseFloat(availableAmountLimitingComponentStr)) &&
+                !isNaN(calculatedOriginalComponents[parseInt(limitingComponentIndexStr)].originalWeight) &&
+                parseFloat(availableAmountLimitingComponentStr) > calculatedOriginalComponents[parseInt(limitingComponentIndexStr)].originalWeight &&
+                calculatedOriginalComponents[parseInt(limitingComponentIndexStr)].originalWeight >= 0 && // only show if original weight is non-negative
                 (
                   <p className="text-sm text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
                     <AlertTriangle className="h-4 w-4" />
-                    Available amount is greater than original for this component. This will scale the batch up.
+                    Available amount is greater than its calculated original weight. This will scale the batch up.
                   </p>
                 )
               }
@@ -338,25 +396,25 @@ const ShortBatchAdjustmentPage: React.FC = () => {
           </div>
         )}
 
-        {newTotalBatchWeight !== null && newComponentWeights.length > 0 && (
+        {newTotalBatchWeight !== null && adjustedBatchResults.length > 0 && (
           <div className="mt-6">
             <h3 className="text-xl font-semibold mb-3 text-primary">Adjusted Batch Results</h3>
             <ResultDisplay label="New Total Batch Weight" value={newTotalBatchWeight} variant="highlight" />
             <div className="mt-4">
-              <h4 className="text-md font-medium mb-2">Adjusted Component Weights:</h4>
+              <h4 className="text-md font-medium mb-2">Adjusted Component Details:</h4>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Component</TableHead>
-                    <TableHead>New Weight</TableHead>
-                    <TableHead className="text-right">New Percentage</TableHead>
+                    <TableHead>New Scaled Weight</TableHead>
+                    <TableHead className="text-right">Target Percentage</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {newComponentWeights.map((comp) => (
+                  {adjustedBatchResults.map((comp) => (
                     <TableRow key={comp.id}>
                       <TableCell>{comp.name}</TableCell>
-                      <TableCell>{isNaN(comp.weight) ? "Invalid Original" : comp.weight.toFixed(3)}</TableCell>
+                      <TableCell>{isNaN(comp.newScaledWeight) ? "Invalid Original" : comp.newScaledWeight.toFixed(3)}</TableCell>
                       <TableCell className="text-right">{isNaN(comp.percentage) ? "-" : `${comp.percentage.toFixed(2)}%`}</TableCell>
                     </TableRow>
                   ))}
@@ -373,9 +431,18 @@ const ShortBatchAdjustmentPage: React.FC = () => {
           <div className="flex items-end gap-2">
             <div className="flex-grow">
               <Label htmlFor="saveBatchName">Batch Name to Save</Label>
-              <Input id="saveBatchName" {...register('saveBatchName')} placeholder="e.g., Product XYZ Standard" className="h-9" />
+              <Input id="saveBatchName" {...register('saveBatchName')} placeholder="e.g., Product XYZ Standard %" className="h-9" />
             </div>
-            <Button onClick={handleSaveBatch} size="sm" disabled={!originalTotalBatchWeightStr || watchedComponents.length === 0 || watchedComponents.some(c => !c.name || !c.weight)}>
+            <Button 
+              onClick={handleSaveBatch} 
+              size="sm" 
+              disabled={
+                !originalTotalBatchWeightStr || 
+                watchedComponents.length === 0 || 
+                watchedComponents.some(c => !c.name || !c.percentage || isNaN(parseFloat(c.percentage))) ||
+                totalOriginalPercentage === 0
+              }
+            >
               <Save className="mr-2 h-4 w-4" /> Save Current Configuration
             </Button>
           </div>
