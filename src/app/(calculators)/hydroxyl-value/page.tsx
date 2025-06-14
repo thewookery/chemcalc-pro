@@ -40,7 +40,7 @@ Blank Titration: ${blank} mL
 Sample Titration: ${sample} mL
 Sample Weight: ${weight} g
 Acid Value (AV): ${acidValue} mg KOH/g
-Hydroxyl Value: ${hydroxylValue.toFixed(3)} mg KOH/g`;
+Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
   }, [blank, sample, weight, acidValue, hydroxylValue]);
   
   return (
@@ -88,7 +88,7 @@ Hydroxyl Value: ${hydroxylValue.toFixed(3)} mg KOH/g`;
           placeholder="e.g., 0.5"
           tooltipText="Acid Value of the sample, which will be added to the calculated hydroxyl component."
         />
-        <ResultDisplay label="Hydroxyl Value" value={hydroxylValue} unit="mg KOH/g" variant="highlight" />
+        <ResultDisplay label="Hydroxyl Value" value={hydroxylValue} variant="highlight" />
       </div>
     </CalculatorWrapper>
   );
