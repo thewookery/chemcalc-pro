@@ -82,51 +82,60 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     if (!isNaN(availWt) && !isNaN(ticketWt) && ticketWt > 0 && !isNaN(origTotalWt) && origTotalWt > 0 && availWt >=0) {
       const adjustedWt = (availWt / ticketWt) * origTotalWt;
       setCalculatedAdjustedTotalBatchWeight(adjustedWt);
-      setValue('targetBatchWeightForComponents', adjustedWt.toFixed(4)); // Auto-fill Part 2 input
+      if (!isNaN(adjustedWt) && isFinite(adjustedWt)) {
+        setValue('targetBatchWeightForComponents', adjustedWt.toFixed(4), { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+      } else {
+        // If Part 1 calculation is invalid, don't auto-fill Part 2, allow manual entry
+      }
     } else {
       setCalculatedAdjustedTotalBatchWeight(null);
-      // Don't clear targetBatchWeightForComponents here, allow manual input
+      // If Part 1 inputs are incomplete/invalid, don't auto-fill Part 2
     }
   }, [watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, setValue]);
 
   // Part 2: Calculate New Component Weights & Total Standard Percentage
   useEffect(() => {
-    const targetBatchWt = parseFloat(watchedTargetBatchWeightForComponents);
+    const targetBatchWtNum = parseFloat(watchedTargetBatchWeightForComponents);
     let currentTotalPercentage = 0;
     const newBreakdownResults: AdjustedComponent[] = [];
     let newSumOfWeights = 0;
 
+    const validTargetBatchWt = (!isNaN(targetBatchWtNum) && isFinite(targetBatchWtNum) && targetBatchWtNum >= 0) ? targetBatchWtNum : NaN;
+
     watchedComponents.forEach(comp => {
-      const perc = parseFloat(comp.standardPercentage);
-      if (!isNaN(perc) && perc >= 0) {
-        currentTotalPercentage += perc;
-        if (!isNaN(targetBatchWt) && targetBatchWt >= 0) {
-          const newWeight = (perc / 100) * targetBatchWt;
-          newBreakdownResults.push({
-            name: comp.name || '',
-            standardPercentage: perc,
-            newRequiredWeight: newWeight,
-          });
-          newSumOfWeights += newWeight;
-        } else {
-          newBreakdownResults.push({
-            name: comp.name || '',
-            standardPercentage: perc,
-            newRequiredWeight: NaN,
-          });
-        }
-      } else {
-         newBreakdownResults.push({
-            name: comp.name || '',
-            standardPercentage: NaN,
-            newRequiredWeight: NaN,
-          });
+      const compName = comp.name || '';
+      const compStdPerc = parseFloat(comp.standardPercentage);
+      const validCompStdPerc = (!isNaN(compStdPerc) && isFinite(compStdPerc) && compStdPerc >= 0) ? compStdPerc : NaN;
+
+      if (!isNaN(validCompStdPerc)) {
+        currentTotalPercentage += validCompStdPerc;
       }
+
+      let calculatedNewWeight = NaN;
+      if (!isNaN(validTargetBatchWt) && !isNaN(validCompStdPerc)) {
+        calculatedNewWeight = (validCompStdPerc / 100) * validTargetBatchWt;
+        if (!isNaN(calculatedNewWeight) && isFinite(calculatedNewWeight)) {
+             newSumOfWeights += calculatedNewWeight;
+        } else {
+            calculatedNewWeight = NaN; 
+        }
+      }
+      
+      newBreakdownResults.push({
+        name: compName,
+        standardPercentage: validCompStdPerc,
+        newRequiredWeight: calculatedNewWeight,
+      });
     });
 
     setTotalStandardPercentage(currentTotalPercentage);
     setComponentBreakdownResults(newBreakdownResults);
-    setSumOfCalculatedComponentWeights(!isNaN(targetBatchWt) && targetBatchWt >=0 ? newSumOfWeights : null);
+    
+    if (!isNaN(newSumOfWeights) && isFinite(newSumOfWeights) && !isNaN(validTargetBatchWt)) {
+        setSumOfCalculatedComponentWeights(newSumOfWeights);
+    } else {
+        setSumOfCalculatedComponentWeights(null);
+    }
 
   }, [watchedTargetBatchWeightForComponents, watchedComponents]);
 
@@ -171,14 +180,13 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     const batchToLoad = savedBatches.find(b => b.id === batchId);
     if (batchToLoad) {
       reset({ 
-        availableLimitingMaterialWt: '', // Reset situational fields
-        ticketLimitingMaterialWt: '',   // Reset situational fields
+        availableLimitingMaterialWt: '', 
+        ticketLimitingMaterialWt: '',   
         originalStandardTotalBatchWt: String(batchToLoad.originalStandardTotalBatchWeight),
-        targetBatchWeightForComponents: '', // Will be recalculated or manually set
+        targetBatchWeightForComponents: '', 
         components: batchToLoad.components.map(c => ({ name: c.name, standardPercentage: String(c.standardPercentage) })),
         saveBatchName: '',
       });
-      // Reset calculated states explicitly as reset might not trigger useEffects immediately in all scenarios
       setCalculatedAdjustedTotalBatchWeight(null);
       setComponentBreakdownResults([]);
       setSumOfCalculatedComponentWeights(null);
@@ -200,7 +208,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     text += `Available Limiting Material Weight: ${watchedAvailableLimitingMaterialWt}\n`;
     text += `Batch Ticket Amount of Limiting Material: ${watchedTicketLimitingMaterialWt}\n`;
     text += `Original Standard Total Batch Weight: ${watchedOriginalStandardTotalBatchWt}\n`;
-    text += `Calculated Adjusted Total Batch Weight: ${calculatedAdjustedTotalBatchWeight !== null ? calculatedAdjustedTotalBatchWeight.toFixed(4) : 'N/A'}\n\n`;
+    text += `Calculated Adjusted Total Batch Weight: ${calculatedAdjustedTotalBatchWeight !== null && !isNaN(calculatedAdjustedTotalBatchWeight) ? calculatedAdjustedTotalBatchWeight.toFixed(4) : 'N/A'}\n\n`;
     
     text += `== Part 2: Calculate New Component Weights ==\n`;
     text += `Target Batch Weight for Components: ${watchedTargetBatchWeightForComponents}\n`;
@@ -208,7 +216,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     componentBreakdownResults.forEach((comp, index) => {
       text += `  - ${comp.name || `Component ${index+1}`}: ${isNaN(comp.standardPercentage) ? 'N/A' : comp.standardPercentage.toFixed(2)}%  =>  New Required Weight: ${isNaN(comp.newRequiredWeight) ? 'N/A' : comp.newRequiredWeight.toFixed(4)}\n`;
     });
-    text += `Sum of New Component Weights: ${sumOfCalculatedComponentWeights !== null ? sumOfCalculatedComponentWeights.toFixed(4) : 'N/A'}\n`;
+    text += `Sum of New Component Weights: ${sumOfCalculatedComponentWeights !== null && !isNaN(sumOfCalculatedComponentWeights) ? sumOfCalculatedComponentWeights.toFixed(4) : 'N/A'}\n`;
     if (totalStandardPercentage !== 100 && totalStandardPercentage > 0) {
       text += `Warning: Total standard percentage of components is ${totalStandardPercentage.toFixed(2)}%, not 100%.\n`;
     }
@@ -224,13 +232,12 @@ const ShortBatchAdjustmentPage: React.FC = () => {
     >
       <form onSubmit={handleSubmit(() => { /* Calculations are real-time via useEffect */ })} className="space-y-8">
         
-        {/* Part 1: Calculate Adjusted Total Batch Weight */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
           <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Determine Adjusted Total Batch Weight</h3>
           <CommonInput
             id="availableLimitingMaterialWt"
             label="Available Amount of Limiting Material"
-            {...register('availableLimitingMaterialWt', { required: "Required", valueAsNumber: true, min: { value: 0, message: "Must be non-negative" } })}
+            {...register('availableLimitingMaterialWt', { valueAsNumber: true, min: { value: 0, message: "Must be non-negative" } })}
             placeholder="e.g., 50"
             tooltipText="The actual amount of the single limiting raw material you have on hand."
             errorMessage={errors.availableLimitingMaterialWt?.message}
@@ -238,7 +245,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
           <CommonInput
             id="ticketLimitingMaterialWt"
             label="Batch Ticket Amount of Limiting Material"
-            {...register('ticketLimitingMaterialWt', { required: "Required", valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
+            {...register('ticketLimitingMaterialWt', { valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
             placeholder="e.g., 100"
             tooltipText="The amount of this limiting material specified on the original, full standard batch ticket."
             errorMessage={errors.ticketLimitingMaterialWt?.message}
@@ -246,7 +253,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
           <CommonInput
             id="originalStandardTotalBatchWt"
             label="Original Standard Total Batch Weight"
-            {...register('originalStandardTotalBatchWt', { required: "Required", valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
+            {...register('originalStandardTotalBatchWt', { valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
             placeholder="e.g., 100000"
             tooltipText="The total weight of the full, original standard batch as per the batch ticket."
             errorMessage={errors.originalStandardTotalBatchWt?.message}
@@ -256,13 +263,12 @@ const ShortBatchAdjustmentPage: React.FC = () => {
 
         <Separator />
 
-        {/* Part 2: Calculate New Component Weights */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
           <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Calculate Component Weights for Adjusted Batch</h3>
           <CommonInput
             id="targetBatchWeightForComponents"
             label="Target Batch Weight for Components"
-            {...register('targetBatchWeightForComponents', { required: "Required", valueAsNumber: true, min: { value: 0, message: "Must be non-negative" }})}
+            {...register('targetBatchWeightForComponents', { valueAsNumber: true, min: { value: 0, message: "Must be non-negative" }})}
             placeholder="e.g., 50000 (auto-filled from Part 1 or enter manually)"
             tooltipText="The desired total weight for the new batch. Auto-filled from Part 1, or can be entered manually."
             errorMessage={errors.targetBatchWeightForComponents?.message}
@@ -276,7 +282,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                 <Input
                   id={`components.${index}.name`}
                   placeholder={`Component ${index + 1}`}
-                  {...register(`components.${index}.name`, { required: "Name is required" })}
+                  {...register(`components.${index}.name`)}
                   className={cn("h-9", errors.components?.[index]?.name && "border-destructive")}
                 />
                 {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
@@ -289,10 +295,9 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                 className="h-9 calculator-input text-input-foreground"
                 placeholder="e.g., 25"
                 {...register(`components.${index}.standardPercentage`, { 
-                    required: "Std. % is required", 
                     valueAsNumber: true, 
                     min: {value: 0, message: "% >= 0"},
-                    max: {value: 100, message: "% <= 100"}
+                    // max: {value: 100, message: "% <= 100"} // Max 100 for individual component is typical but not strictly required for math if sum can be >100
                 })}
                 errorMessage={errors.components?.[index]?.standardPercentage?.message}
               />
@@ -308,16 +313,16 @@ const ShortBatchAdjustmentPage: React.FC = () => {
               </Button>
               <div className="text-sm font-medium">
                   Total Standard %: 
-                  <span className={cn("ml-1", totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => c.standardPercentage)) ? "text-orange-500 font-bold" : "text-green-600 font-bold")}>
-                      {totalStandardPercentage.toFixed(2)}%
+                  <span className={cn("ml-1", totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => !!c.standardPercentage && !isNaN(parseFloat(c.standardPercentage)))) ? "text-orange-500 font-bold" : "text-green-600 font-bold")}>
+                      {isNaN(totalStandardPercentage) ? 'N/A' : totalStandardPercentage.toFixed(2)}%
                   </span>
-                  {totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => c.standardPercentage)) && (
+                  {totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => !!c.standardPercentage && !isNaN(parseFloat(c.standardPercentage)))) && (
                       <TooltipProvider>
                           <Tooltip>
                               <TooltipTrigger asChild>
-                                  <button type="button" aria-label="Total standard percentage warning">
-                                    <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
-                                  </button>
+                                <button type="button" aria-label="Total standard percentage warning">
+                                  <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
+                                </button>
                               </TooltipTrigger>
                               <TooltipContent>
                                   <p>Total standard percentage of components does not sum to 100%. The sum of new component weights might not match the target batch weight.</p>
@@ -328,7 +333,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
               </div>
           </div>
 
-          {componentBreakdownResults.length > 0 && (parseFloat(watchedTargetBatchWeightForComponents) >= 0) && (
+          {componentBreakdownResults.length > 0 && (!isNaN(parseFloat(watchedTargetBatchWeightForComponents)) && parseFloat(watchedTargetBatchWeightForComponents) >= 0) && (
             <div className="mt-6">
               <h4 className="text-md font-medium mb-2">Component Breakdown for Target Batch Weight:</h4>
               <Table>
@@ -350,9 +355,9 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                 </TableBody>
               </Table>
               <ResultDisplay label="Sum of New Component Weights" value={sumOfCalculatedComponentWeights} />
-              {sumOfCalculatedComponentWeights !== null && parseFloat(watchedTargetBatchWeightForComponents) !== sumOfCalculatedComponentWeights && Math.abs(parseFloat(watchedTargetBatchWeightForComponents) - sumOfCalculatedComponentWeights) > 0.001 && (
+              {(sumOfCalculatedComponentWeights !== null && !isNaN(parseFloat(watchedTargetBatchWeightForComponents)) && parseFloat(watchedTargetBatchWeightForComponents) >= 0 && Math.abs(parseFloat(watchedTargetBatchWeightForComponents) - sumOfCalculatedComponentWeights) > 0.001) && (
                 <p className="text-sm text-orange-500 mt-2">
-                  Note: Sum of new component weights ({sumOfCalculatedComponentWeights.toFixed(4)}) does not exactly match Target Batch Weight ({parseFloat(watchedTargetBatchWeightForComponents).toFixed(4)}). This can happen if component percentages don't sum to 100%.
+                  Note: Sum of new component weights ({sumOfCalculatedComponentWeights.toFixed(4)}) does not exactly match Target Batch Weight ({parseFloat(watchedTargetBatchWeightForComponents).toFixed(4)}). This can happen if component percentages don't sum to 100% or due to rounding.
                 </p>
               )}
             </div>
@@ -446,3 +451,5 @@ const ShortBatchAdjustmentPage: React.FC = () => {
 };
 
 export default ShortBatchAdjustmentPage;
+
+    
