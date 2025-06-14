@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -39,7 +40,7 @@ const IodineValueCalculatorPage: React.FC = () => {
 Blank Titration: ${blank} mL
 Sample Titration: ${sample} mL
 Sample Weight: ${sampleWeight} g
-Iodine Value: ${iodineValue.toFixed(3)} g I₂/100g`;
+Iodine Value: ${iodineValue.toFixed(3)}`;
   }, [blank, sample, sampleWeight, iodineValue]);
 
   return (
@@ -78,10 +79,11 @@ Iodine Value: ${iodineValue.toFixed(3)} g I₂/100g`;
           placeholder="e.g., 0.3"
           tooltipText="Weight of the sample in grams. The original example used 0.3g."
         />
-        <ResultDisplay label="Iodine Value" value={iodineValue} unit="g I₂/100g" variant="highlight" />
+        <ResultDisplay label="Iodine Value" value={iodineValue} variant="highlight" />
       </div>
     </CalculatorWrapper>
   );
 };
 
 export default IodineValueCalculatorPage;
+
