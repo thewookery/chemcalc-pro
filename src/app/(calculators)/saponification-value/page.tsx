@@ -31,7 +31,7 @@ const SaponificationValueCalculatorPage: React.FC = () => {
 Blank Titrated: ${blankTitrated} mL
 Sample Titrate: ${sampleTitrate} mL
 Sample Weight: ${sampleWeight} g
-Saponification Value: ${sapValue.toFixed(3)} mg KOH/g`;
+Saponification Value: ${sapValue.toFixed(3)}`;
   }, [blankTitrated, sampleTitrate, sampleWeight, sapValue]);
 
   return (
@@ -69,7 +69,7 @@ Saponification Value: ${sapValue.toFixed(3)} mg KOH/g`;
           placeholder="e.g., 1.0"
           tooltipText="Weight of the sample in grams."
         />
-        <ResultDisplay label="Saponification Value" value={sapValue} unit="mg KOH/g" variant="highlight" />
+        <ResultDisplay label="Saponification Value" value={sapValue} variant="highlight" />
       </div>
     </CalculatorWrapper>
   );
