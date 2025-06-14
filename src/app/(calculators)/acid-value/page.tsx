@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -28,7 +29,7 @@ const AcidValueCalculatorPage: React.FC = () => {
     return `Acid Value Calculation:
 ML Titrated: ${mlTitrated} mL
 Sample Weight: ${sampleWeight} g
-Acid Value: ${acidValue.toFixed(3)} mg KOH/g`;
+Acid Value: ${acidValue.toFixed(3)}`;
   }, [mlTitrated, sampleWeight, acidValue]);
 
   return (
@@ -57,7 +58,7 @@ Acid Value: ${acidValue.toFixed(3)} mg KOH/g`;
           placeholder="e.g., 10.0"
           tooltipText="Enter the weight of the sample in grams."
         />
-        <ResultDisplay label="Acid Value" value={acidValue} unit="mg KOH/g" variant="highlight" />
+        <ResultDisplay label="Acid Value" value={acidValue} variant="highlight" />
       </div>
     </CalculatorWrapper>
   );
