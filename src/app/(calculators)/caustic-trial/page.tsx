@@ -10,7 +10,10 @@ interface CausticTrialResult {
   causticAmount: number;
 }
 
-const CAUSTIC_PERCENTAGES = [0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15];
+const CAUSTIC_PERCENTAGES = [
+  0.08, 0.09, 0.10, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.20,
+  0.21, 0.22, 0.23, 0.24, 0.25, 0.26, 0.27, 0.28, 0.29, 0.30
+];
 
 const CausticTrialCalculatorPage: React.FC = () => {
   const [trialWeight, setTrialWeight] = useState<string>('');
@@ -45,7 +48,7 @@ const CausticTrialCalculatorPage: React.FC = () => {
   return (
     <CalculatorWrapper
       title="Caustic Trial Calculator"
-      description="Calculate caustic amounts for trial solutions based on trial weight and predefined percentages (0.08% to 0.15%)."
+      description="Calculate caustic amounts for trial solutions based on trial weight and predefined percentages (0.08% to 0.30%)."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
