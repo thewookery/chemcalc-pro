@@ -20,7 +20,7 @@ export default function HomePage() {
     <div className="space-y-8">
       <section className="text-center animate-slideUp">
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl font-headline">
-          Welcome to ChemCalc Pro
+          Welcome to Z & S QC lab tools
         </h1>
         <p className="mt-3 text-base text-muted-foreground sm:mt-5 sm:text-lg md:text-xl">
           Your everyday toolkit for chemical calculations. Select a calculator below to get started.

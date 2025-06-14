@@ -5,7 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import AppHeader from '@/components/layout/AppHeader';
 
 export const metadata: Metadata = {
-  title: 'ChemCalc Pro',
+  title: 'Z & S QC lab tools',
   description: 'Specialized calculators for chemical production and lab work.',
 };
 
