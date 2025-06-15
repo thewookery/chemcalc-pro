@@ -23,48 +23,62 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { materialsList } from '@/lib/materials';
+import { materialsList, type Material } from '@/lib/materials';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger as HelpDialogTrigger, // Alias to avoid conflict if any
+  DialogTrigger as HelpDialogTrigger, 
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const SingleComponentExcessAddCalculatorPage: React.FC = () => {
+  const [isClient, setIsClient] = useState(false);
   const [unitsToAdd, setUnitsToAdd] = useState<string>('');
-  const [materialValue, setMaterialValue] = useState<string>(''); // AV or OH value as string
+  const [materialValue, setMaterialValue] = useState<string>(''); 
   const [percentageToAdd, setPercentageToAdd] = useState<number | null>(null);
 
   const [openCombobox, setOpenCombobox] = useState(false);
-  const [comboboxInputValue, setComboboxInputValue] = useState(''); // Tracks text in CommandInput
+  const [comboboxInputValue, setComboboxInputValue] = useState(''); 
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+    // This effect synchronizes comboboxInputValue based on materialValue
     if (materialValue) {
-      const material = materialsList.find(m => m.value.toString() === materialValue);
-      if (material && comboboxInputValue.toLowerCase() !== material.name.toLowerCase()) {
-        setComboboxInputValue(material.name);
-      } else if (!material && comboboxInputValue !== materialValue) {
-        // If materialValue is a custom number not matching a material's value,
-        // and comboboxInputValue is not already that number, set comboboxInputValue to be that number.
-        // This handles direct numeric input into combobox that isn't a known material's value.
-        if (materialValue !== parseFloat(comboboxInputValue).toString()) {
-             setComboboxInputValue(materialValue);
+      const knownMaterialByValue = materialsList.find(m => m.value.toString() === materialValue);
+      if (knownMaterialByValue) {
+        // If materialValue points to a known material, set combobox to its name
+        // only if it's not already set or differs.
+        if (comboboxInputValue.toLowerCase() !== knownMaterialByValue.name.toLowerCase()) {
+          setComboboxInputValue(knownMaterialByValue.name);
+        }
+      } else {
+        // materialValue is a custom numeric string (not a known material's value)
+        // Set comboboxInputValue to this custom numeric string if it's different.
+        if (comboboxInputValue !== materialValue) {
+          setComboboxInputValue(materialValue);
         }
       }
     } else {
-      setComboboxInputValue("");
+      // No materialValue, clear comboboxInputValue if it's not already empty.
+      if (comboboxInputValue !== "") {
+        setComboboxInputValue("");
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [materialValue]);
+  }, [materialValue, comboboxInputValue, isClient]);
 
 
   useEffect(() => {
+    if (!isClient) return;
     const uAdd = parseFloat(unitsToAdd);
     const mVal = parseFloat(materialValue);
 
@@ -74,12 +88,12 @@ const SingleComponentExcessAddCalculatorPage: React.FC = () => {
     } else {
       setPercentageToAdd(null);
     }
-  }, [unitsToAdd, materialValue]);
+  }, [unitsToAdd, materialValue, isClient]);
 
   const formula = "(Units of Component to Add / AV or OH of Material) * 100";
   
   const resultsToCopy = useMemo(() => {
-    if (percentageToAdd === null) return "";
+    if (!isClient || percentageToAdd === null) return "";
     const selectedMaterialByName = materialsList.find(m => m.name.toLowerCase() === comboboxInputValue.toLowerCase());
     const materialDisplayName = selectedMaterialByName ? selectedMaterialByName.name : (materialValue || "Custom Value");
     
@@ -87,9 +101,10 @@ const SingleComponentExcessAddCalculatorPage: React.FC = () => {
 Units of Component to Add: ${unitsToAdd}
 Material: ${materialDisplayName} (AV/OH: ${materialValue})
 Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
-  }, [unitsToAdd, materialValue, percentageToAdd, comboboxInputValue]);
+  }, [isClient, unitsToAdd, materialValue, percentageToAdd, comboboxInputValue]);
 
  const comboboxTriggerText = useMemo(() => {
+    if (!isClient) return "Select or type value...";
     const knownMaterialByName = materialsList.find(m => m.name.toLowerCase() === comboboxInputValue.toLowerCase());
     if (knownMaterialByName && knownMaterialByName.value.toString() === materialValue) {
       return knownMaterialByName.name;
@@ -100,14 +115,29 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
       return knownMaterialByValue.name;
     }
 
-    if (materialValue && !isNaN(parseFloat(materialValue))) return materialValue; // Show custom numeric value if entered
-    if (comboboxInputValue) return comboboxInputValue; // Fallback to whatever is typed if not a valid number/material match
+    if (materialValue && !isNaN(parseFloat(materialValue))) return materialValue; 
+    if (comboboxInputValue) return comboboxInputValue; 
 
     return "Select or type value...";
-  }, [materialValue, comboboxInputValue]);
+  }, [isClient, materialValue, comboboxInputValue]);
 
 
   const materialValueTooltip = "Enter the Acid Value (AV) or Hydroxyl Value (OH) of the material. This value must not be zero. You can select from a predefined list or type a custom value.";
+
+  if (!isClient) {
+    return (
+      <CalculatorWrapper
+        title="Single Component Excess Add Calculator"
+        description="Calculate the percentage of a single component to add."
+      >
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </CalculatorWrapper>
+    );
+  }
 
   return (
     <CalculatorWrapper
@@ -165,28 +195,22 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
             >
               <Command 
                 filter={(value, search) => {
-                  // value is material.name from the list
-                  // search is comboboxInputValue
                   const material = materialsList.find(m => m.name.toLowerCase() === value.toLowerCase());
-                  if (!material) return 0; // Should not happen if value is from materialsList
+                  if (!material) return 0; 
 
                   const nameMatch = material.name.toLowerCase().includes(search.toLowerCase());
                   const materialValStr = material.value.toString();
                   const valueMatch = materialValStr.includes(search);
                   
-                  // Prioritize exact name match or if search is a number and it matches material value
                   if (search.toLowerCase() === material.name.toLowerCase()) return 1;
                   if (!isNaN(parseFloat(search)) && search.length > 0 && materialValStr === search) return 1;
 
-
-                  if (!isNaN(parseFloat(search)) && search.length > 0) { // If search is numeric
-                    if (valueMatch) return 0.9; // Numeric search matches material value
-                    if (nameMatch) return 0.5; // Numeric search term also happens to be in name
+                  if (!isNaN(parseFloat(search)) && search.length > 0) { 
+                    if (valueMatch) return 0.9; 
+                    if (nameMatch) return 0.5; 
                     return 0;
                   }
-                  // Non-numeric search
                   if (nameMatch) return 1; 
-                  // if (valueMatch) return 0.5; // less likely to search by value string if not typing number
                   return 0;
                 }}
               >
@@ -195,21 +219,16 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                   value={comboboxInputValue}
                   onValueChange={(search) => {
                     setComboboxInputValue(search);
-                    // Try to find a material by exact name first
                     const materialByName = materialsList.find(m => m.name.toLowerCase() === search.toLowerCase());
                     if (materialByName) {
                         setMaterialValue(materialByName.value.toString());
                     } else {
-                        // If not found by name, check if the input is a valid number
                         const num = parseFloat(search);
-                        if (!isNaN(num) && isFinite(num) && search.match(/^[\d.-]+$/) && search.trim() !== "") {
+                        if (!isNaN(num) && isFinite(num) && search.match(/^[\d.-]*$/) && search.trim() !== "") {
                           setMaterialValue(num.toString());
                         } else if (search.trim() === "") {
                            setMaterialValue("");
                         }
-                        // If it's not a number and not a material name, materialValue might remain unchanged or empty
-                        // This allows typing partial names while seeing filtered list, without immediately setting materialValue
-                        // to something invalid. MaterialValue is only set if it's a known material or a direct number.
                     }
                   }}
                 />
@@ -219,8 +238,8 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                     {materialsList.map((material) => (
                       <CommandItem
                         key={material.name + "_" + material.value} 
-                        value={material.name} // Value used for filtering and onSelect's currentValue
-                        onSelect={(currentValue) => { // currentValue is material.name
+                        value={material.name} 
+                        onSelect={(currentValue) => { 
                           const selected = materialsList.find(m => m.name.toLowerCase() === currentValue.toLowerCase());
                           if (selected) {
                             setMaterialValue(selected.value.toString());
@@ -310,3 +329,6 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
 };
 
 export default SingleComponentExcessAddCalculatorPage;
+
+
+    
