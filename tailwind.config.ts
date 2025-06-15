@@ -129,10 +129,6 @@ export default {
           '80%': { transform: 'translate(0, 0) skew(0deg)', opacity: '1' },
           '90%': { transform: 'translate(-2px, 2px) skew(2deg)', opacity: '0.95' },
         },
-        walkAcrossScreen: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(100vw)' },
-        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -142,7 +138,6 @@ export default {
         'icon-float': 'iconFloat 100s infinite ease-in-out',
         'rainbow-fade': 'rainbowFade 15s infinite linear',
         'glitch': 'glitchEffect 0.25s linear 1 forwards',
-        'walk-duck': 'walkAcrossScreen 10s linear 1 forwards',
       },
     },
   },
