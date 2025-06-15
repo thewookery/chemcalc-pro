@@ -3,40 +3,48 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
-// Updated SVG for a more detailed mallard-like head with "👀" eyes and neck ring
+// Updated SVG for a more detailed mallard-like head with "👀" eyes, neck ring, and a bucket hat
 const DuckSVG: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 38" className="w-12 h-12 md:w-16 md:h-16">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 42" className="w-12 h-12 md:w-16 md:h-16"> {/* Adjusted viewBox slightly for hat height */}
     {/* Head (Green Ellipse) */}
-    <ellipse cx="23" cy="18" rx="16" ry="14" fill="#008060" stroke="#004D38" strokeWidth="1.5" />
+    <ellipse cx="23" cy="22" rx="16" ry="14" fill="#008060" stroke="#004D38" strokeWidth="1.5" />
     
+    {/* Bucket Hat */}
+    {/* Hat Crown (Slightly squashed ellipse) */}
+    <ellipse cx="23" cy="12" rx="11" ry="6" fill="#D2B48C" stroke="#A0522D" strokeWidth="1" /> {/* Light Tan / Brownish */}
+    {/* Hat Brim (Wider, flatter ellipse, slightly below the crown) */}
+    <ellipse cx="23" cy="17" rx="17" ry="4" fill="#D2B48C" stroke="#A0522D" strokeWidth="1" />
+    {/* Line detail on hat crown */}
+    <path d="M15 12 Q23 9 31 12" stroke="#A0522D" strokeWidth="0.7" fill="none" />
+
+
     {/* White Neck Ring */}
-    {/* This path creates a curved band at the base of the head */}
     <path 
-      d="M12,29 Q23,33 34,29 A16,14 0 0,0 12,29 Z" 
+      d="M12,33 Q23,37 34,33 A16,14 0 0,0 12,33 Z"  /* Adjusted Y coordinates for neck ring due to head shift */
       fill="#FFFFFF" 
       stroke="#E0E0E0" 
       strokeWidth="1"
     />
     {/* Cover the top part of the neck ring that overlaps with the head to refine the shape */}
-     <ellipse cx="23" cy="18" rx="16" ry="14" fill="none" stroke="#008060" strokeWidth="3.5" />
+    <ellipse cx="23" cy="22" rx="16" ry="14" fill="none" stroke="#008060" strokeWidth="3.5" />
 
 
     {/* Beak (Yellow Polygon) */}
-    <polygon points="34,14 46,16 46,22 34,24" fill="#FFCC00" stroke="#B28900" strokeWidth="1" />
+    <polygon points="34,18 46,20 46,26 34,28" fill="#FFCC00" stroke="#B28900" strokeWidth="1" /> {/* Adjusted Y for beak */}
     
     {/* Beak line detail */}
-    <line x1="34" y1="19" x2="45" y2="19" stroke="#B28900" strokeWidth="0.7" />
+    <line x1="34" y1="23" x2="45" y2="23" stroke="#B28900" strokeWidth="0.7" /> {/* Adjusted Y for beak line */}
     
     {/* Nostril (Dark spot on beak) */}
-    <circle cx="43" cy="17.5" r="1.2" fill="#555555" />
+    <circle cx="43" cy="21.5" r="1.2" fill="#555555" /> {/* Adjusted Y for nostril */}
 
-    {/* Eyes (Emoji Style "👀") */}
+    {/* Eyes (Emoji Style "👀") - Placed higher on the head, slightly covered by brim */}
     {/* Right Eye */}
-    <circle fill="#FFFFFF" cx="29" cy="16" r="4.5" />
-    <circle fill="#000000" cx="30" cy="16" r="2.2" /> 
+    <circle fill="#FFFFFF" cx="29" cy="20" r="4.5" /> {/* Adjusted Y for eyes */}
+    <circle fill="#000000" cx="30" cy="20" r="2.2" /> 
     {/* Left Eye */}
-    <circle fill="#FFFFFF" cx="20" cy="16" r="4.5" />
-    <circle fill="#000000" cx="21" cy="16" r="2.2" />
+    <circle fill="#FFFFFF" cx="20" cy="20" r="4.5" /> {/* Adjusted Y for eyes */}
+    <circle fill="#000000" cx="21" cy="20" r="2.2" />
   </svg>
 );
 
@@ -66,7 +74,6 @@ const peekPositions: PeekPosition[] = [
 
 const PeekingDuck: React.FC = () => {
   const [isGloballyVisible, setIsGloballyVisible] = useState(false);
-  // Initialize with the first peek position to avoid undefined initial placement
   const [currentPositionClasses, setCurrentPositionClasses] = useState<string>(peekPositions[0].positionClasses);
   const [currentTransform, setCurrentTransform] = useState<string>(peekPositions[0].hiddenTransform);
 
@@ -75,7 +82,7 @@ const PeekingDuck: React.FC = () => {
   useEffect(() => {
     const initialDelayTimer = setTimeout(() => {
       setIsGloballyVisible(true);
-    }, 5000); // 5 seconds
+    }, 5000); 
     timeoutsRef.current.push(initialDelayTimer);
 
     return () => {
@@ -97,7 +104,7 @@ const PeekingDuck: React.FC = () => {
       if (!isMounted) return;
       clearCurrentTimeouts(); 
 
-      const nextPeekDelay = Math.random() * 7000 + 3000; // 3-10 seconds
+      const nextPeekDelay = Math.random() * 7000 + 3000; 
 
       const peekTimer = setTimeout(() => {
         if (!isMounted) return;
@@ -159,3 +166,4 @@ const PeekingDuck: React.FC = () => {
 };
 
 export default PeekingDuck;
+
