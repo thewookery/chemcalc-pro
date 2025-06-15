@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
-// Updated SVG for a more detailed mallard-like head with "👀" eyes, neck ring, and a larger, better-positioned bucket hat
+// Updated SVG for a more detailed mallard-like head with "👀" eyes, neck ring, and a larger, higher bucket hat
 const DuckSVG: React.FC = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 42" className="w-12 h-12 md:w-16 md:h-16">
     {/* Head (Green Ellipse) */}
@@ -34,13 +34,13 @@ const DuckSVG: React.FC = () => (
     <circle fill="#FFFFFF" cx="20" cy="20" r="4.5" />
     <circle fill="#000000" cx="21" cy="20" r="2.2" />
 
-    {/* Bucket Hat - Made larger and positioned higher, drawn last to be on top */}
+    {/* Bucket Hat - Positioned higher */}
     {/* Hat Crown */}
-    <ellipse cx="23" cy="10" rx="14" ry="7" fill="#D2B48C" stroke="#A0522D" strokeWidth="1.2" />
+    <ellipse cx="23" cy="8" rx="14" ry="7" fill="#D2B48C" stroke="#A0522D" strokeWidth="1.2" />
     {/* Hat Brim */}
-    <ellipse cx="23" cy="16" rx="20" ry="5" fill="#D2B48C" stroke="#A0522D" strokeWidth="1.2" />
+    <ellipse cx="23" cy="14" rx="20" ry="5" fill="#D2B48C" stroke="#A0522D" strokeWidth="1.2" />
     {/* Line detail on hat crown */}
-    <path d="M13 10 Q23 7 33 10" stroke="#A0522D" strokeWidth="0.8" fill="none" />
+    <path d="M13 8 Q23 5 33 8" stroke="#A0522D" strokeWidth="0.8" fill="none" />
   </svg>
 );
 
@@ -162,3 +162,4 @@ const PeekingDuck: React.FC = () => {
 };
 
 export default PeekingDuck;
+
