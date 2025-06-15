@@ -34,7 +34,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const [isIconFloatAnimationActive, setIsIconFloatAnimationActive] = useState(false);
   const [canStartRainbow, setCanStartRainbow] = useState(false);
   
-  const [cardGlitchStyle, setCardGlitchStyle] = useState<React.CSSProperties>({});
+  const [glitchStyle, setGlitchStyle] = useState<React.CSSProperties>({});
   const [glitchAnimationCount, setGlitchAnimationCount] = useState(0);
   const [shouldAttemptInitialGlitch, setShouldAttemptInitialGlitch] = useState(false);
 
@@ -46,7 +46,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   useEffect(() => {
     // Icon Float Animation
     const minFloatDelaySec = 25;
-    const maxFloatDelaySec = 40;
+    const maxFloatDelaySec = 900; // Changed from 40 to 900
     const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
     const actualIconFloatDelaySec = Math.random() * floatAnimationDurationVariation + minFloatDelaySec;
 
@@ -56,8 +56,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
     iconFloatTimeoutRef.current = setTimeout(() => {
       setIsIconFloatAnimationActive(true);
 
-      // Rainbow Animation Logic (starts 20s after float animation begins)
-      const rainbowProbability = 0.01; // 1 in 100 chance
+      const rainbowProbability = 0.01; 
       const shouldAttemptRainbow = Math.random() < rainbowProbability;
       if (shouldAttemptRainbow) {
         const delayForRainbowToStartAfterFloatMs = 20 * 1000;
@@ -71,16 +70,16 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 
 
     // Glitch Animation Logic
-    const initialGlitchProbability = 1 / 25; // 1 in 25 chance
+    const initialGlitchProbability = 1 / 25; 
     const attemptThisGlitch = Math.random() < initialGlitchProbability;
     setShouldAttemptInitialGlitch(attemptThisGlitch);
 
     if (attemptThisGlitch) {
-      const baseMinGlitchDelayMs = 10000; // 10 seconds base
-      const randomAdditionalGlitchMs = Math.random() * 10000; // 0 to 10 seconds additional
+      const baseMinGlitchDelayMs = 10000; 
+      const randomAdditionalGlitchMs = Math.random() * 10000; 
       const actualInitialGlitchDelayMs = baseMinGlitchDelayMs + randomAdditionalGlitchMs;
       
-      setCardGlitchStyle({ animationDelay: `${actualInitialGlitchDelayMs / 1000}s` });
+      setGlitchStyle({ animationDelay: `${actualInitialGlitchDelayMs / 1000}s` });
       
       if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
       firstGlitchTimerRef.current = setTimeout(() => {
@@ -90,7 +89,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
         secondGlitchCheckTimerRef.current = setTimeout(() => {
           const secondGlitchProbability = 0.20; 
           if (Math.random() < secondGlitchProbability) {
-            setCardGlitchStyle({ animationDelay: '0s' }); 
+            setGlitchStyle({ animationDelay: '0s' }); 
             setGlitchAnimationCount(prevCount => prevCount + 1); 
           }
         }, 5000); 
@@ -116,8 +115,8 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
                 className={cn(
                   "h-8 w-8 text-primary transition-transform duration-300 ease-in-out",
                   isIconFloatAnimationActive && "animate-icon-float",
-                  "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none",
-                  canStartRainbow && "animate-rainbow-fade"
+                  canStartRainbow && "animate-rainbow-fade", // This will override text-primary when active
+                  "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none" // Ensure hover still works
                 )}
                 style={iconFloatStyle} 
               />
@@ -125,12 +124,12 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
           </div>
           <CardTitle 
-            key={`glitch-title-${glitchAnimationCount}`}
+            key={`glitch-title-${glitchAnimationCount}`} // Re-mount for re-animation
             className={cn(
               "text-lg font-semibold",
               glitchAnimationCount > 0 && shouldAttemptInitialGlitch && 'animate-glitch'
             )}
-            style={glitchAnimationCount > 0 && shouldAttemptInitialGlitch ? cardGlitchStyle : {}}
+            style={glitchAnimationCount > 0 && shouldAttemptInitialGlitch ? glitchStyle : {}}
           >
             {calculator.name}
           </CardTitle>
