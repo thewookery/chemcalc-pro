@@ -114,7 +114,7 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         fadeIn: 'fadeIn 0.5s ease-in-out',
         slideUp: 'slideUp 0.5s ease-in-out',
-        'icon-float': 'iconFloat 25s infinite ease-in-out',
+        'icon-float': 'iconFloat 100s infinite ease-in-out',
       },
     },
   },
