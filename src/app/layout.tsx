@@ -29,7 +29,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AppHeader />
-          <main className="flex-grow container mx-auto px-4 py-8 animate-slideInFromRight">
+          <main className="flex-grow container mx-auto px-4 py-8 animate-slideUp">
             {children}
           </main>
           <Toaster />
