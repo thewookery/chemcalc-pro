@@ -7,21 +7,124 @@ import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
 import ResultDisplay from '@/components/calculators/ResultDisplay';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+// Removed Input as it's replaced by Combobox or handled by CommonInput
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, PlusCircle, Layers } from 'lucide-react';
+import { Trash2, PlusCircle, Layers, Check, ChevronsUpDown, HelpCircle } from 'lucide-react';
 import type { BatchTicketComponentInput, CalculatedExcessComponent } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { materialsList, type Material } from '@/lib/materials';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 interface FormData {
   totalUnitsToAddToBatch: string;
   components: BatchTicketComponentInput[];
 }
 
+interface MaterialNameComboboxProps {
+  value: string;
+  onChange: (value: string) => void;
+  materials: Material[]; // Expects the full material object for potential future use, though only name is used now
+  placeholder?: string;
+  id?: string;
+}
+
+const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onChange, materials, placeholder, id }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState(value || "");
+
+  useEffect(() => {
+    // Sync searchTerm if the external value changes (e.g. form reset or programmatic set)
+     if (value !== searchTerm) {
+        setSearchTerm(value || "");
+     }
+  }, [value]);
+
+  const handleSelect = (materialName: string) => {
+    onChange(materialName);
+    setSearchTerm(materialName);
+    setIsOpen(false);
+  };
+
+  const handleSearchChange = (newSearchTerm: string) => {
+    setSearchTerm(newSearchTerm);
+    onChange(newSearchTerm); // Update form value as user types custom name
+  };
+  
+  const triggerText = value || placeholder || "Select or type name...";
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          variant="outline"
+          role="combobox"
+          aria-expanded={isOpen}
+          className="w-full justify-between text-input-foreground calculator-input h-9 text-sm"
+        >
+          <span className="truncate">{triggerText}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[200px] overflow-y-auto">
+        <Command
+          filter={(itemValue, search) => { // itemValue is material.name
+            if (itemValue.toLowerCase().includes(search.toLowerCase())) return 1;
+            return 0;
+          }}
+        >
+          <CommandInput
+            placeholder="Search material..."
+            value={searchTerm}
+            onValueChange={handleSearchChange}
+            className="text-sm"
+          />
+          <CommandList>
+            <CommandEmpty>No material found. Type custom name.</CommandEmpty>
+            <CommandGroup>
+              {materials.map((material) => (
+                <CommandItem
+                  key={material.name + material.value} // ensure unique key
+                  value={material.name} // This is what CMDK uses for filtering/selection
+                  onSelect={() => handleSelect(material.name)}
+                  className="text-sm"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === material.name ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {material.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+
 const MultipleComponentsExcessAddPage: React.FC = () => {
-  const { register, control, watch, handleSubmit, formState: { errors } } = useForm<FormData>({
+  const { register, control, watch, handleSubmit, formState: { errors }, setValue } = useForm<FormData>({
     defaultValues: {
       totalUnitsToAddToBatch: '',
       components: [
@@ -103,9 +206,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     
     setCalculatedResults(tempResults);
     setSumOfStandardizedPercentage(currentSumOfStandardizedPerc);
-    // Ensure sumOfCalculatedUnitsToAdd is set to 0 if parsedTotalUnits is invalid or zero to avoid NaN display
     setSumOfCalculatedUnitsToAdd((!isNaN(parsedTotalUnits) && parsedTotalUnits > 0) ? currentSumOfUnitsToAdd : 0);
-
 
   }, [watchedComponents, watchedTotalUnitsToAddToBatch]);
 
@@ -143,7 +244,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           label="Total Units to Add to Batch"
           unit="Units"
           {...register('totalUnitsToAddToBatch', { 
-            setValueAs: (v) => v === "" ? "" : parseFloat(v), // Keep as string if empty, else parse
+            setValueAs: (v) => v === "" ? "" : parseFloat(v), 
             validate: value => parseFloat(value) >= 0 || value === "" || "Must be positive or empty"
           })}
           placeholder="e.g., 20"
@@ -160,12 +261,21 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             <div key={field.id} className="grid grid-cols-[1fr_auto] md:grid-cols-[2fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-muted/20">
               <div className="space-y-1 col-span-1 md:col-span-1">
                 <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
-                <Input
-                  id={`components.${index}.name`}
-                  placeholder={`Component ${index + 1}`}
-                  {...register(`components.${index}.name`)}
-                  className="h-9"
+                <Controller
+                  control={control}
+                  name={`components.${index}.name`}
+                  defaultValue=""
+                  render={({ field: { onChange, value } }) => (
+                    <MaterialNameCombobox
+                      id={`components.${index}.name`}
+                      value={value}
+                      onChange={onChange}
+                      materials={materialsList}
+                      placeholder={`Component ${index + 1}`}
+                    />
+                  )}
                 />
+                 {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
               </div>
               
               <CommonInput
