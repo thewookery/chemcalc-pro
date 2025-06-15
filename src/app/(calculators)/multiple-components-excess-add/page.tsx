@@ -257,7 +257,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
 
-  // Part 2: Component Value Calculation (Excess Units / AV/OH)
+  // Part 2: Component Value Calculation (Excess Units / AV_OH) * 100
   useEffect(() => {
     const newPart2Results: Part2CalculatedValueComponent[] = [];
     let currentSumOfPart2Values = 0;
@@ -268,7 +268,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       const avOrOh = compFromPart1.avOrOhValue;
 
       if (!isNaN(excessUnits) && excessUnits > 0 && !isNaN(avOrOh) && avOrOh !== 0) {
-        const calculatedValue = excessUnits / avOrOh; // Corrected: Division
+        const calculatedValue = (excessUnits / avOrOh) * 100; 
         newPart2Results.push({
           name: compFromPart1.name,
           excessUnits: excessUnits,
@@ -293,7 +293,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   }, [excessAddResults]);
 
 
-  const formula = "Part 1 (Excess Add): Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\nPart 2 (Component Value): Calc. Value = Excess Units (from Part 1) / AV/OH of Material.";
+  const formula = "Part 1 (Excess Add): Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\nPart 2 (Component Value): Calc. Value = (Excess Units (from Part 1) / AV/OH of Material) * 100.";
 
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Calculation:\n\n== Part 1: Excess Add Calculation ==\n`;
@@ -312,7 +312,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
     text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
 
-    text += `\n\n== Part 2: Component Value Calculation (Excess Units / AV_OH) ==\n`;
+    text += `\n\n== Part 2: Component Value Calculation ((Excess Units / AV_OH) * 100) ==\n`;
     text += `Component Name | Excess Units | AV/OH | Calculated Value\n`;
     text += `-----------------------------------------------------------\n`;
     part2Results.forEach(res => {
@@ -558,11 +558,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
         <Separator />
 
-        {/* Part 2: Component Value Calculation (Excess Units / AV/OH) */}
+        {/* Part 2: Component Value Calculation (Excess Units / AV/OH) * 100 */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
           <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Component Value Calculation</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            This section uses the "Excess Units to Add" calculated in Part 1 and divides them by the AV/OH value you entered for each component.
+            This section uses "Excess Units to Add" (Part 1) and AV/OH (Part 1 inputs), calculating: (Excess Units / AV/OH) * 100.
           </p>
           {part2Results.length > 0 && (
             <div className="mt-6 space-y-4">
@@ -573,7 +573,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                     <TableHead>Component Name</TableHead>
                     <TableHead className="text-right">Excess Units (Part 1)</TableHead>
                     <TableHead className="text-right">AV/OH of Material</TableHead>
-                    <TableHead className="text-right">Calculated Value</TableHead>
+                    <TableHead className="text-right">Calculated Value (%)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -602,9 +602,9 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                       </TableCell>
                       <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
                         <div className="flex justify-between items-center md:block">
-                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Calc. Value:</span>
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Calc. Value (%):</span>
                             <span className="font-semibold md:font-normal text-primary md:text-foreground">
-                                {isNaN(comp.calculatedValue) ? '-' : comp.calculatedValue.toFixed(3)}
+                                {isNaN(comp.calculatedValue) ? '-' : `${comp.calculatedValue.toFixed(3)}%`}
                             </span>
                         </div>
                       </TableCell>
@@ -613,7 +613,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 </TableBody>
               </Table>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                <ResultDisplay label="Sum of Part 2 Calculated Values" value={sumOfPart2CalculatedValues} />
+                <ResultDisplay label="Sum of Part 2 Calculated Values" value={sumOfPart2CalculatedValues} unit="%" />
               </div>
               {part2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
                  <p className="text-sm text-amber-600 dark:text-amber-400">
@@ -738,3 +738,5 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
+
+    
