@@ -3,12 +3,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
-// Updated SVG to be a mallard-like head with "👀" eyes
+// Updated SVG for a more detailed mallard-like head with "👀" eyes and neck ring
 const DuckSVG: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 36" className="w-12 h-12 md:w-16 md:h-16">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 38" className="w-12 h-12 md:w-16 md:h-16">
     {/* Head (Green Ellipse) */}
     <ellipse cx="23" cy="18" rx="16" ry="14" fill="#008060" stroke="#004D38" strokeWidth="1.5" />
     
+    {/* White Neck Ring */}
+    {/* This path creates a curved band at the base of the head */}
+    <path 
+      d="M12,29 Q23,33 34,29 A16,14 0 0,0 12,29 Z" 
+      fill="#FFFFFF" 
+      stroke="#E0E0E0" 
+      strokeWidth="1"
+    />
+    {/* Cover the top part of the neck ring that overlaps with the head to refine the shape */}
+     <ellipse cx="23" cy="18" rx="16" ry="14" fill="none" stroke="#008060" strokeWidth="3.5" />
+
+
     {/* Beak (Yellow Polygon) */}
     <polygon points="34,14 46,16 46,22 34,24" fill="#FFCC00" stroke="#B28900" strokeWidth="1" />
     
