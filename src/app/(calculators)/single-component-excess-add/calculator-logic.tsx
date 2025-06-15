@@ -38,14 +38,14 @@ import {
 const SingleComponentExcessAddCalculatorLogic: React.FC = () => {
   const [unitsToAdd, setUnitsToAdd] = useState<string>('');
   const [materialValue, setMaterialValue] = useState<string>(''); 
+  const [batchWeight, setBatchWeight] = useState<string>('');
   const [percentageToAdd, setPercentageToAdd] = useState<number | null>(null);
+  const [totalAmountToAdd, setTotalAmountToAdd] = useState<number | null>(null);
 
   const [openCombobox, setOpenCombobox] = useState(false);
   const [comboboxInputValue, setComboboxInputValue] = useState(''); 
 
   useEffect(() => {
-    // This effect synchronizes comboboxInputValue based on materialValue
-    // or materialValue based on comboboxInputValue if a known material is typed/selected.
     const knownMaterialByName = materialsList.find(m => m.name.toLowerCase() === comboboxInputValue.toLowerCase());
 
     if (knownMaterialByName) {
@@ -53,21 +53,12 @@ const SingleComponentExcessAddCalculatorLogic: React.FC = () => {
         setMaterialValue(knownMaterialByName.value.toString());
       }
     } else {
-      // If comboboxInputValue is not a known material name, it might be a custom numeric value
-      // or a partial name. If it's purely numeric, it might have already set materialValue.
-      // If materialValue corresponds to a known material, but comboboxInputValue doesn't match its name, update comboboxInputValue.
       const knownMaterialByValue = materialsList.find(m => m.value.toString() === materialValue);
       if (knownMaterialByValue && comboboxInputValue.toLowerCase() !== knownMaterialByValue.name.toLowerCase()) {
-         if (parseFloat(materialValue).toString() === materialValue){ // only if materialValue is purely numeric
+         if (parseFloat(materialValue).toString() === materialValue){ 
             setComboboxInputValue(knownMaterialByValue.name);
          }
       } else if (!knownMaterialByValue && materialValue !== comboboxInputValue && parseFloat(materialValue).toString() === materialValue) {
-        // materialValue is a custom number, and combobox input is different.
-        // This case might be tricky, let's prioritize materialValue if it's a valid number not matching a known material.
-        // setComboboxInputValue(materialValue); // Could cause loops if not careful.
-        // Better: if user types a number in combobox, materialValue is set.
-        // If materialValue is set (e.g. programmatically) to a number for which no material name exists,
-        // ensure combobox reflects this numeric value.
         if (materialValue && !isNaN(parseFloat(materialValue)) && !knownMaterialByValue) {
            if (comboboxInputValue !== materialValue) {
              setComboboxInputValue(materialValue);
@@ -81,39 +72,54 @@ const SingleComponentExcessAddCalculatorLogic: React.FC = () => {
   useEffect(() => {
     const uAdd = parseFloat(unitsToAdd);
     const mVal = parseFloat(materialValue);
+    const bWt = parseFloat(batchWeight);
+    let currentPercentageToAdd: number | null = null;
 
     if (!isNaN(uAdd) && !isNaN(mVal) && mVal !== 0) {
       const pAdd = (uAdd / mVal) * 100;
       setPercentageToAdd(pAdd);
+      currentPercentageToAdd = pAdd;
     } else {
       setPercentageToAdd(null);
     }
-  }, [unitsToAdd, materialValue]);
 
-  const formula = "(Units of Component to Add / AV or OH of Material) * 100";
+    if (currentPercentageToAdd !== null && !isNaN(bWt) && bWt >= 0) {
+        const totalAdd = (currentPercentageToAdd / 100) * bWt;
+        setTotalAmountToAdd(totalAdd);
+    } else {
+        setTotalAmountToAdd(null);
+    }
+
+  }, [unitsToAdd, materialValue, batchWeight]);
+
+  const formula = "1. Percentage to Add (%) = (Units of Component to Add / AV or OH of Material) * 100\n2. Total Amount to Add (Units) = (Percentage to Add / 100) * Batch Weight";
   
   const resultsToCopy = useMemo(() => {
-    if (percentageToAdd === null) return "";
     const selectedMaterialByName = materialsList.find(m => m.name.toLowerCase() === comboboxInputValue.toLowerCase());
     const materialDisplayName = selectedMaterialByName ? selectedMaterialByName.name : (materialValue || "Custom Value");
     
-    return `Single Component Excess Add Calculation:
-Units of Component to Add: ${unitsToAdd}
-Material: ${materialDisplayName} (AV/OH: ${materialValue})
-Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
-  }, [unitsToAdd, materialValue, percentageToAdd, comboboxInputValue]);
+    let text = `Single Component Excess Add Calculation:\n`;
+    text += `Units of Component to Add: ${unitsToAdd} Units\n`;
+    text += `Material: ${materialDisplayName} (AV/OH: ${materialValue})\n`;
+    if (percentageToAdd !== null) {
+      text += `Calculated Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%\n`;
+    }
+    text += `Batch Weight: ${batchWeight} Units\n`;
+    if (totalAmountToAdd !== null) {
+      text += `Total Amount of Material to Add: ${totalAmountToAdd.toFixed(3)} Units\n`;
+    }
+    return text;
+  }, [unitsToAdd, materialValue, percentageToAdd, batchWeight, totalAmountToAdd, comboboxInputValue]);
 
   const comboboxTriggerText = useMemo(() => {
-    // Priority: 1. Known material name if combobox input matches one. 2. materialValue if it's a number. 3. comboboxInputValue.
     const knownMaterialByName = materialsList.find(m => m.name.toLowerCase() === comboboxInputValue.toLowerCase());
     if (knownMaterialByName) {
       return knownMaterialByName.name;
     }
     if (materialValue && !isNaN(parseFloat(materialValue)) && parseFloat(materialValue).toString() === materialValue) {
-      // Check if this numeric materialValue corresponds to a known material
       const knownMaterialByValue = materialsList.find(m => m.value.toString() === materialValue);
-      if (knownMaterialByValue) return knownMaterialByValue.name; // Prefer name if value matches
-      return materialValue; // It's a custom number
+      if (knownMaterialByValue) return knownMaterialByValue.name; 
+      return materialValue; 
     }
     if (comboboxInputValue) return comboboxInputValue; 
     return "Select or type value...";
@@ -125,7 +131,7 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
   return (
     <CalculatorWrapper
       title="Single Component Excess Add Calculator"
-      description="Calculate the percentage of a single component (e.g., acid or alcohol) to add to a batch based on the units needed and the material's Acid Value (AV) or Hydroxyl Value (OH)."
+      description="Calculate the percentage of a single component (e.g., acid or alcohol) to add to a batch based on the units needed, the material's AV/OH, and the total batch weight."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
@@ -137,7 +143,7 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
           value={unitsToAdd}
           onChange={(e) => setUnitsToAdd(e.target.value)}
           placeholder="e.g., 10"
-          tooltipText="Enter the amount of the component (e.g., acid or alcohol) you need to add."
+          tooltipText="Enter the amount of the component (e.g., acid or alcohol) you need to add. This refers to the reactive part."
         />
         
         <div className="space-y-1.5 w-full">
@@ -177,7 +183,7 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
               className="w-[--radix-popover-trigger-width] p-0 max-h-[300px] overflow-y-auto"
             >
               <Command 
-                filter={(value, search) => { // value is material.name from CommandItem
+                filter={(value, search) => { 
                   const material = materialsList.find(m => m.name.toLowerCase() === value.toLowerCase());
                   if (!material) return 0; 
 
@@ -185,23 +191,14 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                   const materialValStr = material.value.toString();
                   const valueSearchMatch = materialValStr.includes(search);
                   
-                  // Exact name match is highest priority
                   if (search.toLowerCase() === material.name.toLowerCase()) return 1;
-                  
-                  // If search is purely numeric and matches material value exactly
-                  if (!isNaN(parseFloat(search)) && search.match(/^[\d.-]*$/) && search.trim() !== "" && materialValStr === search) return 0.95;
-
-                  // If search is numeric, prioritize matching material values
-                  if (!isNaN(parseFloat(search)) && search.match(/^[\d.-]*$/) && search.trim() !== "") { 
-                    if (valueSearchMatch) return 0.9; // Material value contains numeric search
-                    // Don't show if numeric search doesn't match value part, even if name matches
+                  if (!isNaN(parseFloat(search)) && search.match(/^[\\d.-]*$/) && search.trim() !== "" && materialValStr === search) return 0.95;
+                  if (!isNaN(parseFloat(search)) && search.match(/^[\\d.-]*$/) && search.trim() !== "") { 
+                    if (valueSearchMatch) return 0.9; 
                     return 0; 
                   }
-                  
-                  // If search is text, prioritize name match
                   if (nameMatch) return 1; 
-
-                  return 0; // No match
+                  return 0; 
                 }}
               >
                 <CommandInput
@@ -213,14 +210,12 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                     if (materialByName) {
                         setMaterialValue(materialByName.value.toString());
                     } else {
-                        // Only set materialValue if search is a valid, non-empty number string
                         const num = parseFloat(search);
-                        if (!isNaN(num) && isFinite(num) && search.match(/^[\d.-]*$/) && search.trim() !== "") {
+                        if (!isNaN(num) && isFinite(num) && search.match(/^[\\d.-]*$/) && search.trim() !== "") {
                           setMaterialValue(num.toString());
                         } else if (search.trim() === "") {
-                           setMaterialValue(""); // Clear if input is empty
+                           setMaterialValue(""); 
                         }
-                        // If search is non-numeric and not a material name, materialValue remains (or becomes empty if search empty)
                     }
                   }}
                 />
@@ -230,8 +225,8 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                     {materialsList.map((material) => (
                       <CommandItem
                         key={material.name + "_" + material.value} 
-                        value={material.name} // This value is used by CMDK's filter
-                        onSelect={(currentValue) => { // currentValue is material.name
+                        value={material.name} 
+                        onSelect={(currentValue) => { 
                           const selected = materialsList.find(m => m.name.toLowerCase() === currentValue.toLowerCase());
                           if (selected) {
                             setMaterialValue(selected.value.toString());
@@ -262,7 +257,18 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
           )}
         </div>
 
-        <ResultDisplay label="Percentage of Material to Add" value={percentageToAdd} unit="%" variant="highlight" />
+        <CommonInput
+          id="batchWeight"
+          label="Batch Weight"
+          unit="Units (e.g., lbs)"
+          value={batchWeight}
+          onChange={(e) => setBatchWeight(e.target.value)}
+          placeholder="e.g., 1000"
+          tooltipText="Enter the total weight of the batch. The 'Total Amount to Add' will be in these same units."
+        />
+
+        <ResultDisplay label="Calculated Percentage of Material to Add" value={percentageToAdd} unit="%" />
+        <ResultDisplay label="Total Amount of Material to Add" value={totalAmountToAdd} unit="Units" variant="highlight" />
       </div>
       <div className="mt-8 pt-6 border-t">
         <Dialog>
@@ -275,37 +281,48 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
             <DialogHeader>
               <DialogTitle className="text-xl">How to Use the Single Component Excess Add Calculator</DialogTitle>
               <DialogDescription>
-                This calculator determines the percentage of a single material (like an acid or alcohol) to add to a batch. This is often used when you need to add a specific amount (units) of a component to react, and you know its Acid Value (AV) or Hydroxyl Value (OH).
+                This calculator helps determine the total amount of a single material (like an acid or alcohol) to add to a batch, considering its reactivity (AV/OH) and the desired batch weight.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
               <section>
                 <h4 className="font-semibold text-md mb-2">1. Input Units of Component to Add</h4>
                 <p className="mb-1 text-muted-foreground">
-                  Enter the amount (in units, e.g., pounds, kilograms, grams) of the specific component you need to add to your batch. This is the quantity that needs to react or be incorporated.
+                  Enter the amount (in units, e.g., pounds, kilograms, grams) of the specific component (e.g. the acid part of an ester) you need to incorporate into your batch based on its reactive value.
                 </p>
                 <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">10 Units</span></div>
               </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">2. Input AV or OH of Material</h4>
                 <p className="mb-1 text-muted-foreground">
-                  Enter the Acid Value (AV) or Hydroxyl Value (OH) of the raw material you are adding.
+                  Enter the Acid Value (AV) or Hydroxyl Value (OH) of the raw material you are using.
                   You can select a material from the dropdown list (which will auto-fill its AV/OH value) or type a custom numeric AV/OH value directly.
-                  This value must not be zero for the calculation to be valid.
+                  This value must not be zero.
                 </p>
                 <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">
                   Select: <span className="font-mono p-1 bg-background rounded">2-Ethylhexanoic Acid (AV: 389)</span> OR Type: <span className="font-mono p-1 bg-background rounded">389</span>
                 </div>
               </section>
               <section>
-                <h4 className="font-semibold text-md mb-2">3. Understanding the Result</h4>
+                <h4 className="font-semibold text-md mb-2">3. Input Batch Weight</h4>
                 <p className="mb-1 text-muted-foreground">
-                  The calculator will display the "Percentage of Material to Add". This is the percentage, based on the material's AV/OH, that corresponds to the "Units of Component to Add" you entered.
+                  Enter the total weight of the batch you are making. The units used here (e.g., pounds, kilograms) will be the same units for the "Total Amount of Material to Add" result.
                 </p>
-                <p className="mb-1 text-muted-foreground">The formula used is:</p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 lbs</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">4. Understanding the Results</h4>
+                <p className="mb-1 text-muted-foreground">
+                  The calculator will display two key results:
+                </p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Calculated Percentage of Material to Add:</strong> This is an intermediate value representing the percentage of the material needed, based on its AV/OH and the "Units of Component to Add".</li>
+                  <li><strong>Total Amount of Material to Add:</strong> This is the final amount of the raw material (e.g., the actual 2-Ethylhexanoic Acid) you need to weigh out for your specified "Batch Weight".</li>
+                </ul>
+                <p className="mt-1 mb-1 text-muted-foreground">The formulas used are:</p>
+                <code className="block whitespace-pre-wrap my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
                 <p className="text-muted-foreground">
-                  This calculation essentially normalizes the "Units to Add" against the material's specific reactivity (AV or OH value) and expresses it as a percentage. This percentage can then be used in other calculations, such as determining the total amount to add to a larger batch if this component is part of a multi-component addition.
+                  This calculation allows you to determine how much of a bulk raw material to use when you know how many "reactive units" you need and the total size of your batch.
                 </p>
               </section>
             </div>
@@ -322,3 +339,4 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
 };
 
 export default SingleComponentExcessAddCalculatorLogic;
+

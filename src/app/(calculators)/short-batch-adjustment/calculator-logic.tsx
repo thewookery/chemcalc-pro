@@ -38,6 +38,7 @@ import {
   DialogHeader as HelpDialogHeader,
   DialogTitle as HelpDialogTitle,
   DialogTrigger as HelpDialogTrigger,
+  Dialog as HelpDialog,
 } from "@/components/ui/dialog";
 
 
