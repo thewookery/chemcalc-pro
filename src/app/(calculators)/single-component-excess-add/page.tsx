@@ -32,32 +32,34 @@ const materialsList = [
   { name: "C 101 (HCFA)", value: 270, type: "acid" },
   { name: "C810 Acid", value: 370, type: "acid" },
   { name: "C9 Acid", value: 350, type: "acid" },
+  { name: "Century 1107 Isostearic", value: 186, type: "acid" },
+  { name: "Century D1 Acid", value: 177, type: "acid" },
+  { name: "Dimer Acid", value: 195, type: "acid" },
+  { name: "Dodecanedioic Acid", value: 487, type: "acid" },
   { name: "Emersol 7036 VEG Stearic", value: 210, type: "acid" },
+  { name: "Emery 2016", value: 194, type: "acid" },
+  { name: "Fatty Acid Canola", value: 191, type: "acid" },
+  { name: "Heptanoic C7 Acid", value: 431, type: "acid" },
+  { name: "Isobutyric Acid", value: 637, type: "acid" },
   { name: "Isononanoic Acid", value: 355, type: "acid" },
   { name: "Isostearic Acid", value: 182, type: "acid" },
+  { name: "Isocarb 16", value: 215, type: "acid" },
   { name: "Lauric Acid", value: 280, type: "acid" },
   { name: "Neodecanoic Acid", value: 326, type: "acid" },
   { name: "Neopentanoic Acid", value: 549, type: "acid" },
   { name: "Oleic Acid", value: 202, type: "acid" },
   { name: "Oleic Acid Veg", value: 202, type: "acid" },
+  { name: "P205", value: 1178, type: "acid" },
+  { name: "Palmitic Acid", value: 219, type: "acid" },
   { name: "Phthalic Acid", value: 675, type: "acid" },
   { name: "Sebacic Acid", value: 553, type: "acid" },
   { name: "Stearic Acid 132", value: 207, type: "acid" },
   { name: "Stearic Acid 1655 VEG", value: 208.5, type: "acid" },
+  { name: "TM Anhydride", value: 876, type: "acid" },
   { name: "TOFA", value: 195, type: "acid" },
   { name: "TOFA VEG", value: 197, type: "acid" },
-  { name: "Emery 2016", value: 194, type: "acid" },
-  { name: "Palmitic Acid", value: 219, type: "acid" },
-  { name: "Century 1107 Isostearic", value: 186, type: "acid" },
-  { name: "Century D1 Acid", value: 177, type: "acid" },
-  { name: "Heptanoic C7 Acid", value: 431, type: "acid" },
-  { name: "Valeric CS Acid", value: 549, type: "acid" },
-  { name: "TM Anhydride", value: 876, type: "acid" },
-  { name: "Dodecandiodic Acid", value: 487, type: "acid" },
-  { name: "Isobutyric Acid", value: 637, type: "acid" },
-  { name: "P205", value: 850, type: "acid" },
-  { name: "Isocarb 16", value: 215, type: "acid" },
-  { name: "Fatty Acid Canola", value: 191, type: "acid" },
+  { name: "Valeric C5 Acid", value: 549, type: "acid" },
+  { name: "355 acid", value: 355, type: "acid" },
   // Alcohols (OH)
   { name: "2-EH (Alcohol)", value: 430, type: "alcohol" },
   { name: "Alfol10", value: 351, type: "alcohol" },
@@ -71,9 +73,11 @@ const materialsList = [
   { name: "Exxal9", value: 389, type: "alcohol" },
   { name: "Glycerin", value: 1834, type: "alcohol" },
   { name: "Isononanol", value: 380, type: "alcohol" },
+  { name: "Isofol20", value: 187, type: "alcohol" },
   { name: "Marlipal013", value: 279, type: "alcohol" },
   { name: "90%NPGSlurry", value: 967.5, type: "alcohol" },
   { name: "NPGFlake", value: 1075, type: "alcohol" },
+  { name: "Oxocol900", value: 387, type: "alcohol" }, // Corrected value
   { name: "PE-MonoGrade", value: 1640, type: "alcohol" },
   { name: "PEG200", value: 563, type: "alcohol" },
   { name: "PEG300", value: 374, type: "alcohol" },
@@ -82,11 +86,9 @@ const materialsList = [
   { name: "Pentaerythritol-Tech", value: 1615, type: "alcohol" },
   { name: "PropyleneGlycol", value: 1475, type: "alcohol" },
   { name: "Sorbitol(70%)", value: 1294, type: "alcohol" },
+  { name: "TergitolL61", value: 56, type: "alcohol" },
   { name: "TMP", value: 1247, type: "alcohol" },
   { name: "TriethyleneGlycol", value: 747, type: "alcohol" },
-  { name: "Oxocol900", value: 3387, type: "alcohol" },
-  { name: "TergitolL61", value: 56, type: "alcohol" },
-  { name: "Isofol20", value: 187, type: "alcohol" },
 ];
 
 
@@ -101,20 +103,15 @@ const SingleComponentExcessAddCalculatorPage: React.FC = () => {
   useEffect(() => {
     if (materialValue) {
       const material = materialsList.find(m => m.value.toString() === materialValue);
-      // If the combobox input value is already the name of the found material, don't change it.
-      // This prevents the input value from changing if user types a name that's also a value (e.g. "DEG")
-      // or if they just selected it.
-      // If it's not the material's name (e.g., it's just the numeric value, or a partial search) then update it.
       if (material && comboboxInputValue.toLowerCase() !== material.name.toLowerCase()) {
         setComboboxInputValue(material.name);
       } else if (!material && comboboxInputValue !== materialValue) {
-        // If a custom value is set and it's not what's in the input box
         setComboboxInputValue(materialValue);
       }
     } else {
       setComboboxInputValue("");
     }
-  }, [materialValue]); // Only run when materialValue changes
+  }, [materialValue, comboboxInputValue]);
 
 
   useEffect(() => {
@@ -143,19 +140,15 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
  const comboboxTriggerText = useMemo(() => {
     const knownMaterialByName = materialsList.find(m => m.name.toLowerCase() === comboboxInputValue.toLowerCase());
     if (knownMaterialByName) {
-        // If the input value matches a material name, and that material's value is the current materialValue, show the name.
         if (knownMaterialByName.value.toString() === materialValue) {
             return knownMaterialByName.name;
         }
     }
-    // If materialValue is set and corresponds to a known material (selected from list), show its name.
     const knownMaterialByValue = materialsList.find(m => m.value.toString() === materialValue);
     if (knownMaterialByValue) {
       return knownMaterialByValue.name;
     }
-    // If materialValue is set but not in the list (custom number), show materialValue.
     if (materialValue) return materialValue;
-    // If materialValue is not set, show placeholder.
     return "Select or type value...";
   }, [materialValue, comboboxInputValue]);
 
@@ -220,7 +213,6 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                   const nameMatch = material?.name.toLowerCase().includes(search.toLowerCase());
                   const valueMatch = material?.value.toString().includes(search);
                   if (nameMatch || valueMatch) return 1;
-                  // Allow searching by direct numeric input if not found in names
                   if (!isNaN(parseFloat(search)) && search.length > 0) return 1; 
                   return 0;
                 }}
@@ -231,20 +223,14 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                   onValueChange={(search) => {
                     setComboboxInputValue(search);
                     const num = parseFloat(search);
-                    // Only set materialValue if it's a valid number
-                    // Or if search is empty, clear materialValue
                     if (!isNaN(num) && isFinite(num)) {
                       setMaterialValue(search);
                     } else if (search === "") {
                       setMaterialValue("");
                     } else {
-                      // If it's not a number and not empty, check if it matches a name
                       const matchedMaterial = materialsList.find(m => m.name.toLowerCase() === search.toLowerCase());
                       if (matchedMaterial) {
                         setMaterialValue(matchedMaterial.value.toString());
-                      } else {
-                        // Keep materialValue as is, or clear if no match from previous state is intended
-                        // For now, we allow comboboxInputValue to be free text until a selection or valid number
                       }
                     }
                   }}
@@ -254,7 +240,7 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                   <CommandGroup>
                     {materialsList.map((material) => (
                       <CommandItem
-                        key={material.name}
+                        key={material.name + material.value} // Ensure unique key if names/values can repeat
                         value={material.name} 
                         onSelect={(currentValue) => { 
                           const selected = materialsList.find(m => m.name.toLowerCase() === currentValue.toLowerCase());
@@ -268,10 +254,10 @@ Percentage of Material to Add: ${percentageToAdd.toFixed(3)}%`;
                         <Check
                           className={cn(
                             "mr-2 h-4 w-4",
-                             materialValue === material.value.toString() ? "opacity-100" : "opacity-0"
+                             materialValue === material.value.toString() && comboboxInputValue.toLowerCase() === material.name.toLowerCase() ? "opacity-100" : "opacity-0"
                           )}
                         />
-                        {material.name} ({material.value})
+                        {material.name} ({material.type === "acid" ? "AV" : "OH"}: {material.value})
                       </CommandItem>
                     ))}
                   </CommandGroup>
