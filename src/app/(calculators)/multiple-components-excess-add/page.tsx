@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, PlusCircle, Layers, Check, ChevronsUpDown, HelpCircle, Save, Upload, AlertTriangle } from 'lucide-react';
-import type { BatchTicketComponentInput, CalculatedExcessComponent, SavedBatch, SavedBatchComponent, AdjustedComponent } from '@/types';
+import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle } from 'lucide-react';
+import type { BatchTicketComponentInput, CalculatedExcessComponent, SavedBatch } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { materialsList, type Material } from '@/lib/materials';
@@ -28,7 +28,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -49,7 +48,7 @@ interface FormData {
   totalExcessUnitsToAdd: string;
   components: BatchTicketComponentInput[];
   saveFormulaName: string;
-  referenceOriginalTotalBatchWeightForSave: string; 
+  referenceOriginalTotalBatchWeightForSave: string;
 }
 
 interface MaterialNameComboboxProps {
@@ -79,9 +78,9 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
 
   const handleSearchChange = (newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
-    onChange(newSearchTerm); 
+    onChange(newSearchTerm);
   };
-  
+
   const triggerText = value || placeholder || "Select or type name...";
 
   return (
@@ -99,12 +98,12 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
+      <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0 max-h-[200px] overflow-y-auto"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command
-          filter={(itemValue, search) => { 
+          filter={(itemValue, search) => {
             if (itemValue.toLowerCase().includes(search.toLowerCase())) return 1;
             return 0;
           }}
@@ -120,8 +119,8 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
             <CommandGroup>
               {materials.map((material) => (
                 <CommandItem
-                  key={material.name + material.value} 
-                  value={material.name} 
+                  key={material.name + material.value}
+                  value={material.name}
                   onSelect={() => handleSelect(material.name)}
                   className="text-sm"
                 >
@@ -168,19 +167,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   const watchedTotalExcessUnitsToAdd = watch('totalExcessUnitsToAdd');
   const watchedReferenceOriginalTotalBatchWeightForSave = watch('referenceOriginalTotalBatchWeightForSave');
 
-  // State for Part 1: Excess Add Calculation
   const [excessAddResults, setExcessAddResults] = useState<CalculatedExcessComponent[]>([]);
   const [totalOriginalPercentage, setTotalOriginalPercentage] = useState<number>(0);
   const [sumOfStandardizedPercentage, setSumOfStandardizedPercentage] = useState<number>(0);
   const [sumOfCalculatedExcessUnits, setSumOfCalculatedExcessUnits] = useState<number>(0);
 
-  // State for Part 2: Full Batch Component Breakdown
-  const [desiredTotalBatchWeightForFullBatch, setDesiredTotalBatchWeightForFullBatch] = useState<string>('');
-  const [fullBatchBreakdownResults, setFullBatchBreakdownResults] = useState<AdjustedComponent[]>([]);
-  const [sumOfFullBatchWeights, setSumOfFullBatchWeights] = useState<number | null>(null);
 
-
-  // Effect for Part 1: Excess Add Calculation
   useEffect(() => {
     const parsedTotalExcessUnits = parseFloat(watchedTotalExcessUnitsToAdd);
     let currentTotalOriginalPerc = 0;
@@ -203,7 +195,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         if (!isNaN(originalPerc) && originalPerc > 0) {
           const standardizedPerc = (originalPerc / currentTotalOriginalPerc) * 100;
           currentSumOfStandardizedPerc += standardizedPerc;
-          
+
           let unitsForThisComponent = NaN;
           if (!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits > 0) {
             unitsForThisComponent = (standardizedPerc / 100) * parsedTotalExcessUnits;
@@ -215,7 +207,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             name: comp.name || '',
             percentageFromTicket: originalPerc,
             standardizedPercentage: standardizedPerc,
-            unitsToAdd: unitsForThisComponent, 
+            unitsToAdd: unitsForThisComponent,
           });
         } else {
              tempResults.push({
@@ -236,78 +228,18 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             });
         });
     }
-    
+
     setExcessAddResults(tempResults);
     setSumOfStandardizedPercentage(currentSumOfStandardizedPerc);
     setSumOfCalculatedExcessUnits((!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits > 0) ? currentSumOfExcessUnits : 0);
 
   }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
 
-  // Effect for Part 2: Full Batch Component Breakdown
-  useEffect(() => {
-    const targetFullBatchWtNum = parseFloat(desiredTotalBatchWeightForFullBatch);
-    const newFullBatchResults: AdjustedComponent[] = [];
-    let newSumOfFullWeights = 0;
 
-    const validTargetFullBatchWt = (!isNaN(targetFullBatchWtNum) && isFinite(targetFullBatchWtNum) && targetFullBatchWtNum >= 0) ? targetFullBatchWtNum : NaN;
+  const formula = "Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.";
 
-    // Part 2 calculation is dependent on sumOfCalculatedExcessUnits being positive from Part 1
-    if (sumOfCalculatedExcessUnits > 0 && !isNaN(validTargetFullBatchWt) && excessAddResults.length > 0) {
-      excessAddResults.forEach(compFromPart1 => {
-        const compName = compFromPart1.name || '';
-        const unitsForThisComp = compFromPart1.unitsToAdd; // This is the 'excess unit' for the component from Part 1
-
-        let calculatedNewWeightForFullBatch = NaN;
-        let proportionAsPercentage = NaN;
-
-        // Ensure unitsForThisComp is a valid number and sumOfCalculatedExcessUnits is positive to avoid division by zero
-        if (!isNaN(unitsForThisComp) && isFinite(unitsForThisComp) && unitsForThisComp >= 0 && sumOfCalculatedExcessUnits > 0) {
-          const proportion = unitsForThisComp / sumOfCalculatedExcessUnits;
-          proportionAsPercentage = proportion * 100;
-          
-          if (!isNaN(proportion) && isFinite(proportion)) {
-            calculatedNewWeightForFullBatch = proportion * validTargetFullBatchWt;
-            if (!isNaN(calculatedNewWeightForFullBatch) && isFinite(calculatedNewWeightForFullBatch)) {
-              newSumOfFullWeights += calculatedNewWeightForFullBatch;
-            } else {
-              calculatedNewWeightForFullBatch = NaN;
-            }
-          }
-        }
-        
-        newFullBatchResults.push({
-          name: compName,
-          // This field in AdjustedComponent now stores the component's share of total excess, as a percentage
-          standardPercentage: !isNaN(proportionAsPercentage) ? proportionAsPercentage : NaN, 
-          newRequiredWeight: calculatedNewWeightForFullBatch,
-        });
-      });
-    } else {
-      // If dependencies for Part 2 calc are not met (e.g., no excess units calculated), create empty/placeholder results
-      const sourceForPlaceholders = excessAddResults.length > 0 ? excessAddResults : watchedComponents;
-      sourceForPlaceholders.forEach(comp => {
-        newFullBatchResults.push({
-          name: comp.name || (comp as BatchTicketComponentInput).name || '', // Ensure name is accessible
-          standardPercentage: NaN,
-          newRequiredWeight: NaN,
-        });
-      });
-    }
-
-    setFullBatchBreakdownResults(newFullBatchResults);
-    // Only set sum if calculation was possible
-    if (sumOfCalculatedExcessUnits > 0 && !isNaN(newSumOfFullWeights) && isFinite(newSumOfFullWeights) && !isNaN(validTargetFullBatchWt)) {
-        setSumOfFullBatchWeights(newSumOfFullWeights);
-    } else {
-        setSumOfFullBatchWeights(null);
-    }
-  }, [excessAddResults, desiredTotalBatchWeightForFullBatch, sumOfCalculatedExcessUnits, watchedComponents]);
-
-
-  const formula = "1. Std. % (for Excess) = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\n2. Full Batch Wt. (per Comp.) = (Comp. Excess Units / Total Excess Units) * Desired Total Full Batch Wt.";
-  
   const resultsToCopy = useMemo(() => {
-    let text = `Multiple Components Calculation:\n\n== Part 1: Excess Add Calculation ==\n`;
+    let text = `Multiple Components Excess Add Calculation:\n\n`;
     text += `Components (% from Batch Ticket):\n`;
     watchedComponents.forEach((comp, index) => {
       text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}%\n`;
@@ -321,25 +253,9 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(13) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(13)} | ${isNaN(res.standardizedPercentage) ? 'N/A'.padEnd(14) : (res.standardizedPercentage.toFixed(2) + '%').padEnd(14)} | ${isNaN(res.unitsToAdd) ? 'N/A' : res.unitsToAdd.toFixed(3)}\n`;
     });
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
-    text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n\n`;
-
-    text += `== Part 2: Full Batch Component Breakdown ==\n`;
-    text += `Desired Total Batch Weight (for Full Batch): ${desiredTotalBatchWeightForFullBatch}\n`;
-    if (sumOfCalculatedExcessUnits > 0 && parseFloat(desiredTotalBatchWeightForFullBatch) > 0) {
-        text += `Component Breakdown (based on share of calculated excess from Part 1):\n`;
-        text += `Component Name | Share of Excess (%) | Weight for Full Batch\n`;
-        text += `-------------------------------------------------------------\n`;
-        fullBatchBreakdownResults.forEach(res => {
-        // res.standardPercentage now holds (Comp.Excess/TotalExcess)*100
-        text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.standardPercentage) ? 'N/A'.padEnd(19) : (res.standardPercentage.toFixed(2) + '%').padEnd(19)} | ${isNaN(res.newRequiredWeight) ? 'N/A' : res.newRequiredWeight.toFixed(3)}\n`;
-        });
-        text += `Sum of Calculated Weights for Full Batch: ${sumOfFullBatchWeights !== null ? sumOfFullBatchWeights.toFixed(3) : 'N/A'}\n`;
-    } else {
-        text += `Full batch breakdown requires valid excess unit calculations in Part 1 and a desired total batch weight.\n`;
-    }
-
+    text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
     return text;
-  }, [watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, excessAddResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, desiredTotalBatchWeightForFullBatch, fullBatchBreakdownResults, sumOfFullBatchWeights]);
+  }, [watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, excessAddResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits]);
 
   const handleSaveFormula = () => {
     const formulaName = watch('saveFormulaName');
@@ -357,7 +273,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       toast({ title: "Error", description: "Reference Original Total Batch Weight must be a positive number to save.", variant: "destructive" });
       return;
     }
-    
+
     const componentsToSave = watchedComponents
         .filter(c => c.name && c.percentageFromTicket && !isNaN(parseFloat(c.percentageFromTicket)))
         .map(c => ({ name: c.name, standardPercentage: parseFloat(c.percentageFromTicket) }));
@@ -370,8 +286,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const newSavedFormula: SavedBatch = {
       id: Date.now().toString(),
       name: formulaName.trim(),
-      originalStandardTotalBatchWeight: refTotalWt, 
-      components: componentsToSave, 
+      originalStandardTotalBatchWeight: refTotalWt,
+      components: componentsToSave,
       createdAt: new Date().toISOString(),
     };
 
@@ -385,13 +301,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const formulaToLoad = savedFormulas.find(f => f.id === formulaId);
     if (formulaToLoad) {
       reset({
-        totalExcessUnitsToAdd: '', 
+        totalExcessUnitsToAdd: '',
         components: formulaToLoad.components.map(c => ({ name: c.name, percentageFromTicket: String(c.standardPercentage) })),
         saveFormulaName: '',
-        referenceOriginalTotalBatchWeightForSave: String(formulaToLoad.originalStandardTotalBatchWeight), 
+        referenceOriginalTotalBatchWeightForSave: String(formulaToLoad.originalStandardTotalBatchWeight),
       });
-      setDesiredTotalBatchWeightForFullBatch(''); 
-      setSelectedFormulaToLoad(''); 
+      setSelectedFormulaToLoad('');
       toast({ title: "Formula Loaded", description: `Data for "${formulaToLoad.name}" has been loaded.` });
     }
   };
@@ -404,15 +319,14 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   return (
     <CalculatorWrapper
-      title="Multiple Components Calculator"
-      description="Standardize component percentages for excess addition, then optionally calculate a full batch breakdown using these standardized proportions."
+      title="Multiple Components Excess Add Calculator"
+      description="Standardize component percentages from a batch ticket and calculate how to distribute a total excess quantity among them."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
       <form onSubmit={handleSubmit(() => { /* Calculations are real-time */ })} className="space-y-8">
-        {/* Part 1: Excess Add Section */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-            <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Excess Add Calculation</h3>
+            <h3 className="text-xl font-semibold mb-3 text-primary">Excess Add Calculation</h3>
             <div>
                 <Label className="text-lg font-semibold">Component Percentages from Batch Ticket</Label>
                 <p className="text-sm text-muted-foreground mb-3">Enter each component and its percentage as listed on the original batch ticket.</p>
@@ -436,14 +350,14 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                         />
                         {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
                     </div>
-                    
+
                     <CommonInput
                         id={`components.${index}.percentageFromTicket`}
                         label="Batch Ticket %"
                         className="h-9 calculator-input text-input-foreground"
                         unit="%"
                         placeholder="e.g., 78.89"
-                        {...register(`components.${index}.percentageFromTicket`, { 
+                        {...register(`components.${index}.percentageFromTicket`, {
                             setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
                             validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "% must be positive or empty"
                         })}
@@ -467,12 +381,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             </div>
 
             <Separator />
-            
+
             <CommonInput
             id="totalExcessUnitsToAdd"
             label="Total Excess Units to Add to Batch"
             unit="Units"
-            {...register('totalExcessUnitsToAdd', { 
+            {...register('totalExcessUnitsToAdd', {
                 setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
                 validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
             })}
@@ -496,8 +410,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                     {excessAddResults.map((comp, index) => (
-                    <TableRow 
-                        key={index} 
+                    <TableRow
+                        key={index}
                         className="block md:table-row mb-4 md:mb-0 p-3 md:p-0 border rounded-lg md:border-b md:border-0 md:rounded-none shadow-md md:shadow-none last:mb-0 md:last:mb-0"
                     >
                         <TableCell className="block md:table-cell p-1 md:p-4 font-medium">
@@ -547,65 +461,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             </div>
             )}
         </section>
-
-        <Separator />
-
-        {/* Part 2: Full Batch Component Breakdown Section */}
-        <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-            <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Full Batch Component Breakdown</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-                This section uses the **share of calculated excess units** from Part 1 to break down a desired total batch weight.
-            </p>
-            <CommonInput
-                id="desiredTotalBatchWeightForFullBatch"
-                label="Desired Total Batch Weight (for Full Batch)"
-                unit="Units"
-                value={desiredTotalBatchWeightForFullBatch}
-                onChange={(e) => setDesiredTotalBatchWeightForFullBatch(e.target.value)}
-                placeholder="e.g., 1000"
-                tooltipText="Enter the total weight of the full batch you want to produce."
-                
-            />
-
-            {fullBatchBreakdownResults.length > 0 && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && sumOfCalculatedExcessUnits > 0 && (
-                <div className="mt-6 space-y-4">
-                    <h3 className="text-lg font-semibold">Calculated Full Batch Breakdown</h3>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Component Name</TableHead>
-                                <TableHead className="text-right">Share of Excess (%)</TableHead>
-                                <TableHead className="text-right">Weight for Full Batch</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {fullBatchBreakdownResults.map((comp, index) => (
-                                <TableRow key={`full_batch_comp_${index}`}>
-                                    <TableCell>{comp.name || `Component ${index + 1}`}</TableCell>
-                                    {/* comp.standardPercentage now stores (Comp.Excess/TotalExcess)*100 */}
-                                    <TableCell className="text-right">{isNaN(comp.standardPercentage) ? '-' : `${comp.standardPercentage.toFixed(2)}%`}</TableCell>
-                                    <TableCell className="text-right font-semibold text-primary">{isNaN(comp.newRequiredWeight) ? '-' : comp.newRequiredWeight.toFixed(3)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    <ResultDisplay label="Sum of Calculated Weights for Full Batch" value={sumOfFullBatchWeights} unit="Units" />
-                     {sumOfFullBatchWeights !== null && !isNaN(parseFloat(desiredTotalBatchWeightForFullBatch)) && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && Math.abs(parseFloat(desiredTotalBatchWeightForFullBatch) - sumOfFullBatchWeights) > 0.001 && (
-                        <p className="text-sm text-orange-500 mt-2">
-                        Note: Sum of calculated weights for full batch ({sumOfFullBatchWeights.toFixed(3)}) does not exactly match the desired total batch weight ({parseFloat(desiredTotalBatchWeightForFullBatch).toFixed(3)}). This can occur due to rounding.
-                        </p>
-                    )}
-                </div>
-            )}
-            { (sumOfCalculatedExcessUnits <= 0 || isNaN(sumOfCalculatedExcessUnits)) && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && (
-                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Full batch breakdown requires valid component percentages and a positive "Total Excess Units to Add" in Part 1.
-                </p>
-            )}
-        </section>
       </form>
 
-      {/* Save/Load Section */}
       <div className="mt-8 pt-6 border-t">
         <h3 className="text-lg font-medium mb-3">Manage Saved Formulas</h3>
         <div className="space-y-4 p-4 border rounded-md bg-muted/30">
@@ -619,23 +476,23 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
               label="Reference Original Total Batch Weight for Saved Formula"
               className="h-9 calculator-input"
               tooltipText="Enter the original total weight this formula's percentages typically represent (e.g., 100000 lbs). Used for compatibility if loading into Short Batch Adjustment calculator."
-              {...register('referenceOriginalTotalBatchWeightForSave', { 
+              {...register('referenceOriginalTotalBatchWeightForSave', {
                   setValueAs: (v) => v === "" ? "" : (parseFloat(v) > 0 ? parseFloat(v).toString() : ""),
                   validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) > 0) || "Must be a positive number"
               })}
               errorMessage={errors.referenceOriginalTotalBatchWeightForSave?.message}
             />
           </div>
-          <Button 
-            onClick={handleSaveFormula} 
-            size="sm" 
+          <Button
+            onClick={handleSaveFormula}
+            size="sm"
             className="mt-2"
             disabled={
               !watch('saveFormulaName').trim() ||
               !watchedReferenceOriginalTotalBatchWeightForSave ||
               isNaN(parseFloat(watchedReferenceOriginalTotalBatchWeightForSave)) ||
               parseFloat(watchedReferenceOriginalTotalBatchWeightForSave) <= 0 ||
-              watchedComponents.length === 0 || 
+              watchedComponents.length === 0 ||
               watchedComponents.some(c => !c.name || !c.percentageFromTicket || isNaN(parseFloat(c.percentageFromTicket)))
             }
           >
@@ -646,11 +503,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             <div className="space-y-2 pt-4 border-t mt-4">
               <Label htmlFor="loadFormulaSelect">Load Saved Formula</Label>
                <div className="flex items-center gap-2">
-                <select 
+                <select
                     id="loadFormulaSelect"
-                    value={selectedFormulaToLoad} 
+                    value={selectedFormulaToLoad}
                     onChange={(e) => {
-                        setSelectedFormulaToLoad(e.target.value); 
+                        setSelectedFormulaToLoad(e.target.value);
                         if(e.target.value) handleLoadFormula(e.target.value);
                     }}
                     className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
@@ -663,7 +520,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                     ))}
                 </select>
               </div>
-              
+
               <h4 className="text-sm font-medium mt-4">Saved Formulas:</h4>
               <ul className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2">
                 {savedFormulas.map(formula => (
@@ -708,6 +565,3 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
-        
- 
-    
