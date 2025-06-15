@@ -33,23 +33,32 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const [canStartRainbow, setCanStartRainbow] = useState(false);
 
   useEffect(() => {
-    const minDelay = 25; // seconds
-    const maxDelay = 40; // seconds
-    // Calculate initial delay for the float animation only once
-    const initialFloatDelaySec = Math.random() * (maxDelay - minDelay) + minDelay;
-    
+    // Calculate random delay for the float animation (25s to 40s)
+    const minFloatDelay = 25; // seconds
+    const maxFloatDelay = 40; // seconds
+    const initialFloatDelaySec = Math.random() * (maxFloatDelay - minFloatDelay) + minFloatDelay;
     setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
 
-    // Schedule rainbow fade to start 20 seconds after the float animation begins
-    // The total delay from mount is initialFloatDelaySec (for float to start) + 20s (wait time)
-    const totalDelayForRainbowMs = (initialFloatDelaySec + 20) * 1000;
-    
-    const rainbowTimerId = setTimeout(() => {
-      setCanStartRainbow(true);
-    }, totalDelayForRainbowMs);
+    // Determine if this icon gets a chance to have the rainbow animation
+    const rainbowProbability = 0.2; // 20% chance
+    const shouldAttemptRainbow = Math.random() < rainbowProbability;
+
+    let rainbowTimerId: NodeJS.Timeout;
+
+    if (shouldAttemptRainbow) {
+      // Schedule rainbow fade to start 20 seconds after the float animation begins
+      // The total delay from mount is initialFloatDelaySec (for float to start) + 20s (wait time)
+      const totalDelayForRainbowMs = (initialFloatDelaySec + 20) * 1000;
+      
+      rainbowTimerId = setTimeout(() => {
+        setCanStartRainbow(true);
+      }, totalDelayForRainbowMs);
+    }
 
     return () => {
-      clearTimeout(rainbowTimerId); // Cleanup timer on unmount
+      if (shouldAttemptRainbow) {
+        clearTimeout(rainbowTimerId); // Cleanup timer on unmount
+      }
     };
   }, []); // Empty dependency array, runs once on mount
 
@@ -79,3 +88,4 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
+
