@@ -3,44 +3,51 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
+interface DuckSVGProps {
+  rotationAngle?: number;
+}
+
 // Updated SVG for a more detailed mallard-like head with "👀" eyes, neck ring, and a larger, higher BLACK bucket hat
-const DuckSVG: React.FC = () => (
+// Now includes rotation capability
+const DuckSVG: React.FC<DuckSVGProps> = ({ rotationAngle = 0 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 42" className="w-12 h-12 md:w-16 md:h-16">
-    {/* Head (Green Ellipse) */}
-    <ellipse cx="23" cy="22" rx="16" ry="14" fill="#008060" stroke="#004D38" strokeWidth="1.5" />
-    
-    {/* White Neck Ring */}
-    <path 
-      d="M12,33 Q23,37 34,33 A16,14 0 0,0 12,33 Z"
-      fill="#FFFFFF" 
-      stroke="#E0E0E0" 
-      strokeWidth="1"
-    />
-    {/* Cover the top part of the neck ring that overlaps with the head to refine the shape */}
-    <ellipse cx="23" cy="22" rx="16" ry="14" fill="none" stroke="#008060" strokeWidth="3.5" />
+    <g transform={`rotate(${rotationAngle} 24 21)`}>
+      {/* Hat Brim - Drawn first so head is on top of back part of brim */}
+      <ellipse cx="23" cy="6" rx="20" ry="5" fill="#000000" stroke="#222222" strokeWidth="1.2" />
+      
+      {/* Head (Green Ellipse) */}
+      <ellipse cx="23" cy="19" rx="16" ry="14" fill="#008060" stroke="#004D38" strokeWidth="1.5" />
+      
+      {/* White Neck Ring */}
+      <path 
+        d="M12,30 Q23,34 34,30 A16,14 0 0,0 12,30 Z" // Adjusted y-coords for neck ring
+        fill="#FFFFFF" 
+        stroke="#E0E0E0" 
+        strokeWidth="1"
+      />
+      {/* Cover the top part of the neck ring that overlaps with the head to refine the shape */}
+      <ellipse cx="23" cy="19" rx="16" ry="14" fill="none" stroke="#008060" strokeWidth="3.5" />
 
-    {/* Beak (Yellow Polygon) */}
-    <polygon points="34,18 46,20 46,26 34,28" fill="#FFCC00" stroke="#B28900" strokeWidth="1" />
-    {/* Beak line detail */}
-    <line x1="34" y1="23" x2="45" y2="23" stroke="#B28900" strokeWidth="0.7" />
-    {/* Nostril (Dark spot on beak) */}
-    <circle cx="43" cy="21.5" r="1.2" fill="#555555" />
+      {/* Beak (Yellow Polygon) */}
+      <polygon points="34,15 46,17 46,23 34,25" fill="#FFCC00" stroke="#B28900" strokeWidth="1" />
+      {/* Beak line detail */}
+      <line x1="34" y1="20" x2="45" y2="20" stroke="#B28900" strokeWidth="0.7" />
+      {/* Nostril (Dark spot on beak) */}
+      <circle cx="43" cy="18.5" r="1.2" fill="#555555" />
 
-    {/* Eyes (Emoji Style "👀") - Placed on the head */}
-    {/* Right Eye */}
-    <circle fill="#FFFFFF" cx="29" cy="20" r="4.5" />
-    <circle fill="#000000" cx="30" cy="20" r="2.2" /> 
-    {/* Left Eye */}
-    <circle fill="#FFFFFF" cx="20" cy="20" r="4.5" />
-    <circle fill="#000000" cx="21" cy="20" r="2.2" />
+      {/* Eyes (Emoji Style "👀") - Placed on the head */}
+      {/* Right Eye */}
+      <circle fill="#FFFFFF" cx="29" cy="17" r="4.5" />
+      <circle fill="#000000" cx="30" cy="17" r="2.2" /> 
+      {/* Left Eye */}
+      <circle fill="#FFFFFF" cx="20" cy="17" r="4.5" />
+      <circle fill="#000000" cx="21" cy="17" r="2.2" />
 
-    {/* Bucket Hat - Positioned higher and black */}
-    {/* Hat Crown */}
-    <ellipse cx="23" cy="6" rx="14" ry="7" fill="#000000" stroke="#222222" strokeWidth="1.2" />
-    {/* Hat Brim */}
-    <ellipse cx="23" cy="12" rx="20" ry="5" fill="#000000" stroke="#222222" strokeWidth="1.2" />
-    {/* Line detail on hat crown */}
-    <path d="M13 6 Q23 3 33 6" stroke="#222222" strokeWidth="0.8" fill="none" />
+      {/* Bucket Hat Crown - Drawn after head for correct layering of front part of brim */}
+      <ellipse cx="23" cy="0" rx="14" ry="7" fill="#000000" stroke="#222222" strokeWidth="1.2" />
+      {/* Line detail on hat crown */}
+      <path d="M13 0 Q23 -3 33 0" stroke="#222222" strokeWidth="0.8" fill="none" />
+    </g>
   </svg>
 );
 
@@ -50,21 +57,23 @@ interface PeekPosition {
   positionClasses: string;
   hiddenTransform: string;
   visibleTransform: string;
+  rotation: number; // Added rotation angle
 }
 
 const PEEK_TRANSITION_DURATION = 500; // ms
 const PEEK_VISIBLE_DURATION = 1500; // ms
 
 // Adjusted visibleTransforms to show ~90% of the head
+// Added rotation values. Assumes original SVG beak points to the right (0 degrees).
 const peekPositions: PeekPosition[] = [
-  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]' },
-  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]' },
-  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]' },
-  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[10%]' },
-  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[10%]' },
-  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]' },
-  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]' },
-  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]' },
+  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -45 }, // Peeking up-right
+  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -90 }, // Peeking straight up
+  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -135 }, // Peeking up-left
+  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[10%]', rotation: 0 },    // Peeking right
+  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[10%]', rotation: 180 }, // Peeking left
+  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 45  },  // Peeking down-right
+  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 90  },  // Peeking straight down
+  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 135 }, // Peeking down-left
 ];
 
 
@@ -72,6 +81,8 @@ const PeekingDuck: React.FC = () => {
   const [isGloballyVisible, setIsGloballyVisible] = useState(false);
   const [currentPositionClasses, setCurrentPositionClasses] = useState<string>(peekPositions[0].positionClasses);
   const [currentTransform, setCurrentTransform] = useState<string>(peekPositions[0].hiddenTransform);
+  const [currentRotation, setCurrentRotation] = useState<number>(peekPositions[0].rotation);
+
 
   const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
@@ -110,6 +121,8 @@ const PeekingDuck: React.FC = () => {
 
         setCurrentPositionClasses(newPosition.positionClasses);
         setCurrentTransform(newPosition.hiddenTransform); 
+        setCurrentRotation(newPosition.rotation);
+
 
         const animationStartTimer = setTimeout(() => {
           if (!isMounted) return;
@@ -150,15 +163,18 @@ const PeekingDuck: React.FC = () => {
     <div
       className={cn(
         "fixed z-[9999] transition-transform ease-in-out",
-        currentPositionClasses,
-        currentTransform
+        currentPositionClasses
       )}
-      style={{ transitionDuration: `${PEEK_TRANSITION_DURATION}ms` }}
+      style={{ 
+        transform: currentTransform,
+        transitionDuration: `${PEEK_TRANSITION_DURATION}ms` 
+      }}
       aria-hidden="true"
     >
-      <DuckSVG />
+      <DuckSVG rotationAngle={currentRotation} />
     </div>
   );
 };
 
 export default PeekingDuck;
+
