@@ -12,6 +12,7 @@ const calculators: CalculatorMeta[] = [
   { slug: 'standard-dilution', name: 'Standard Dilution (M1V1=M2V2)', description: 'Calculate volumes for dilutions.', icon: "Scaling" },
   { slug: 'percentage', name: 'Percentage Calculator', description: 'Perform various percentage calculations.', icon: "Percent" },
   { slug: 'caustic-trial', name: 'Caustic Trial Calculator', description: 'Calculate caustic amounts for trial solutions.', icon: "Sigma" },
+  { slug: 'soda-ash-trials', name: 'Soda Ash Trials Calculator', description: 'Calculate soda ash amount for trials, with minimum add rule.', icon: "TestTube2" },
   { slug: 'short-batch-adjustment', name: 'Short Batch Adjustment', description: 'Proportionally adjust batch components based on a limiting material.', icon: "Scaling" }, // Note: Scaling icon is repeated, which is fine.
   { slug: 'single-component-excess-add', name: 'Single Component Excess Add', description: 'Calculate % of a single material to add based on AV/OH.', icon: "FilePlus" },
   { slug: 'multiple-components-excess-add', name: 'Multiple Components Calculator', description: 'Define components, calculate excess adds, and determine full batch weights.', icon: "Layers" },
