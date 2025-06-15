@@ -1,6 +1,7 @@
+
 import CalculatorCard from '@/components/CalculatorCard';
 import type { CalculatorMeta } from '@/types';
-import { Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette } from 'lucide-react';
+import { Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus } from 'lucide-react';
 
 const calculators: CalculatorMeta[] = [
   { slug: 'acid-value', name: 'Acid Value Calculator', description: 'Calculate Acid Value from titration data.', icon: Beaker },
@@ -13,6 +14,7 @@ const calculators: CalculatorMeta[] = [
   { slug: 'caustic-trial', name: 'Caustic Trial Calculator', description: 'Calculate caustic amounts for trial solutions.', icon: Sigma },
   { slug: 'batch-caustic-add', name: 'Batch Caustic Add Calculator', description: 'Determine caustic needed for batch adjustments.', icon: Weight },
   { slug: 'short-batch-adjustment', name: 'Short Batch Adjustment', description: 'Proportionally adjust batch components.', icon: Scaling },
+  { slug: 'standardization', name: 'Standardization Calculator', description: 'Calculate adjustments for single component excess.', icon: FilePlus },
 ];
 
 export default function HomePage() {
