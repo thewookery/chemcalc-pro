@@ -152,6 +152,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       totalExcessUnitsToAdd: '',
       components: [
         { name: '', percentageFromTicket: '' },
+        { name: '', percentageFromTicket: '' },
+        { name: '', percentageFromTicket: '' },
       ],
       saveFormulaName: '',
       referenceOriginalTotalBatchWeightForSave: '',
