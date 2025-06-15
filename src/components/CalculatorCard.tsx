@@ -35,6 +35,8 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   
   const [cardGlitchStyle, setCardGlitchStyle] = useState<React.CSSProperties>({});
   const [glitchAnimationCount, setGlitchAnimationCount] = useState(0);
+  const [shouldAttemptInitialGlitch, setShouldAttemptInitialGlitch] = useState(false);
+
 
   const rainbowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstGlitchTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,33 +64,35 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
     }
 
     // Glitch Animation Logic
-    const initialGlitchProbability = 1 / 25; // 1 in 25 chance for the first glitch
-    const shouldAttemptInitialGlitch = Math.random() < initialGlitchProbability;
+    const initialGlitchProbability = 1 / 25; // 1 in 25 chance
+    const attemptThisGlitch = Math.random() < initialGlitchProbability;
+    setShouldAttemptInitialGlitch(attemptThisGlitch);
 
-    if (shouldAttemptInitialGlitch) {
+
+    if (attemptThisGlitch) {
       const baseMinGlitchDelayMs = 10000; // 10 seconds base
       const randomAdditionalGlitchMs = Math.random() * 10000; // 0 to 10 seconds additional
       const actualInitialGlitchDelayMs = baseMinGlitchDelayMs + randomAdditionalGlitchMs;
       const glitchDurationMs = 250; // Duration of the glitch animation
 
       setCardGlitchStyle({ animationDelay: `${actualInitialGlitchDelayMs / 1000}s` });
-      setGlitchAnimationCount(1); // Trigger the first animation
-
-      const checkForSecondGlitch = () => {
-        if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
-        secondGlitchCheckTimerRef.current = setTimeout(() => {
-          const secondGlitchProbability = 0.20; // 1/5 chance for second glitch
-          if (Math.random() < secondGlitchProbability) {
-            setCardGlitchStyle({ animationDelay: '0s' }); // Second glitch plays immediately
-            setGlitchAnimationCount(prevCount => prevCount + 1); // Re-trigger by changing key
-          }
-        }, 5000); // 5-second pause
-      };
       
       if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
       firstGlitchTimerRef.current = setTimeout(() => {
-        checkForSecondGlitch();
-      }, actualInitialGlitchDelayMs + glitchDurationMs); // Schedule check after first glitch + its duration
+        setGlitchAnimationCount(1); // Trigger the first animation
+
+        const checkForSecondGlitch = () => {
+          if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
+          secondGlitchCheckTimerRef.current = setTimeout(() => {
+            const secondGlitchProbability = 0.20; // 1/5 chance for second glitch
+            if (Math.random() < secondGlitchProbability) {
+              setCardGlitchStyle({ animationDelay: '0s' }); // Second glitch plays immediately
+              setGlitchAnimationCount(prevCount => prevCount + 1); // Re-trigger by changing key
+            }
+          }, 5000); // 5-second pause after first glitch duration
+        };
+        checkForSecondGlitch(); // Check for second glitch after first one finishes
+      }, actualInitialGlitchDelayMs); // Schedule first glitch
     }
 
 
@@ -135,4 +139,3 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
-
