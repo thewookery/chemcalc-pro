@@ -53,7 +53,7 @@ body {
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    --dark-blob-color: hsl(220, 15%, 20%); /* For light mode dark blob */
+    --dark-blob-color: 220 15% 20%; /* For light mode dark blob (HSL values only) */
   }
 
   .dark {
@@ -101,7 +101,7 @@ body {
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
-    --dark-blob-color: hsl(220, 15%, 10%); /* For dark mode dark blob */
+    --dark-blob-color: 220 15% 10%; /* For dark mode dark blob (HSL values only) */
   }
 }
 
@@ -128,13 +128,13 @@ body {
   width: 100%;
   height: 100%;
   background-image:
-    radial-gradient(circle at 10% 20%, hsla(var(--primary), 0.2) 0%, transparent 50%),
-    radial-gradient(circle at 80% 30%, hsla(var(--primary), 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 50% 80%, hsla(var(--dark-blob-color), 0.25) 0%, transparent 60%);
+    radial-gradient(circle at 10% 20%, hsla(var(--primary), 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 30%, hsla(var(--primary), 0.25) 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, hsla(var(--dark-blob-color), 0.35) 0%, transparent 60%);
   background-size: 300% 300%; /* Make gradients large for slow, broad movement */
-  opacity: 0.5; /* Overall subtlety */
+  opacity: 0.7; /* Overall subtlety */
   animation: meltWarp 45s ease-in-out infinite;
-  filter: blur(30px); /* Soften the edges */
+  filter: blur(20px); /* Soften the edges */
 }
 
 @keyframes meltWarp {
