@@ -82,7 +82,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             unitsToAdd: unitsForThisComponent,
           });
         } else {
-            // Push placeholder for invalid/empty inputs to maintain row structure
              tempResults.push({
                 name: comp.name || '',
                 percentageFromTicket: NaN,
@@ -92,7 +91,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         }
       });
     } else {
-        // If totalOriginalPerc is 0, create empty results for each component
         watchedComponents.forEach(comp => {
             tempResults.push({
                 name: comp.name || '',
@@ -105,7 +103,9 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     
     setCalculatedResults(tempResults);
     setSumOfStandardizedPercentage(currentSumOfStandardizedPerc);
-    setSumOfCalculatedUnitsToAdd(currentSumOfUnitsToAdd);
+    // Ensure sumOfCalculatedUnitsToAdd is set to 0 if parsedTotalUnits is invalid or zero to avoid NaN display
+    setSumOfCalculatedUnitsToAdd((!isNaN(parsedTotalUnits) && parsedTotalUnits > 0) ? currentSumOfUnitsToAdd : 0);
+
 
   }, [watchedComponents, watchedTotalUnitsToAddToBatch]);
 
@@ -123,7 +123,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     text += `Component Name | % from Ticket | Standardized % | Units to Add\n`;
     text += `------------------------------------------------------------------\n`;
     calculatedResults.forEach(res => {
-      text += `${res.name.padEnd(14)} | ${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(13) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(13)} | ${isNaN(res.standardizedPercentage) ? 'N/A'.padEnd(14) : (res.standardizedPercentage.toFixed(2) + '%').padEnd(14)} | ${isNaN(res.unitsToAdd) ? 'N/A' : res.unitsToAdd.toFixed(3)}\n`;
+      text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(13) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(13)} | ${isNaN(res.standardizedPercentage) ? 'N/A'.padEnd(14) : (res.standardizedPercentage.toFixed(2) + '%').padEnd(14)} | ${isNaN(res.unitsToAdd) ? 'N/A' : res.unitsToAdd.toFixed(3)}\n`;
     });
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
     text += `Sum of Calculated Units to Add: ${sumOfCalculatedUnitsToAdd.toFixed(3)}\n`;
@@ -142,7 +142,10 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           id="totalUnitsToAddToBatch"
           label="Total Units to Add to Batch"
           unit="Units"
-          {...register('totalUnitsToAddToBatch', { valueAsNumber: true, min: {value: 0, message: "Must be positive"} })}
+          {...register('totalUnitsToAddToBatch', { 
+            setValueAs: (v) => v === "" ? "" : parseFloat(v), // Keep as string if empty, else parse
+            validate: value => parseFloat(value) >= 0 || value === "" || "Must be positive or empty"
+          })}
           placeholder="e.g., 20"
           tooltipText="The total combined amount of all excess components you intend to add."
           errorMessage={errors.totalUnitsToAddToBatch?.message}
@@ -154,8 +157,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           <Label className="text-lg font-semibold">Component Percentages from Batch Ticket</Label>
           <p className="text-sm text-muted-foreground mb-3">Enter each component and its percentage as listed on the original batch ticket.</p>
           {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-[2fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-muted/20">
-              <div className="space-y-1">
+            <div key={field.id} className="grid grid-cols-[1fr_auto] md:grid-cols-[2fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-muted/20">
+              <div className="space-y-1 col-span-1 md:col-span-1">
                 <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
                 <Input
                   id={`components.${index}.name`}
@@ -171,11 +174,14 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 className="h-9 calculator-input text-input-foreground"
                 unit="%"
                 placeholder="e.g., 78.89"
-                {...register(`components.${index}.percentageFromTicket`, { valueAsNumber: true, min: {value: 0, message: "% must be positive"} })}
+                {...register(`components.${index}.percentageFromTicket`, { 
+                    setValueAs: (v) => v === "" ? "" : parseFloat(v),
+                    validate: value => parseFloat(value) >= 0 || value === "" || "% must be positive or empty"
+                })}
                 errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
               />
 
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end col-start-2 md:col-start-auto" aria-label="Remove component">
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
@@ -196,7 +202,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
              <Separator />
             <h3 className="text-xl font-semibold">Calculated Breakdown</h3>
             <Table>
-              <TableHeader>
+              <TableHeader className="hidden md:table-header-group">
                 <TableRow>
                   <TableHead>Component Name</TableHead>
                   <TableHead className="text-right">Original %</TableHead>
@@ -206,22 +212,52 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {calculatedResults.map((comp, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{comp.name || `Component ${index + 1}`}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.percentageFromTicket) ? '-' : `${comp.percentageFromTicket.toFixed(2)}%`}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.standardizedPercentage) ? '-' : `${comp.standardizedPercentage.toFixed(2)}%`}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}</TableCell>
+                  <TableRow 
+                    key={index} 
+                    className="block md:table-row mb-4 md:mb-0 p-3 md:p-0 border rounded-lg md:border-b md:border-0 md:rounded-none shadow-md md:shadow-none last:mb-0 md:last:mb-0"
+                  >
+                    <TableCell className="block md:table-cell p-1 md:p-4 font-medium">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Name:</span>
+                            <span>{comp.name || `Component ${index + 1}`}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Original %:</span>
+                            <span>{isNaN(comp.percentageFromTicket) ? '-' : `${comp.percentageFromTicket.toFixed(2)}%`}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Std. %:</span>
+                            <span>{isNaN(comp.standardizedPercentage) ? '-' : `${comp.standardizedPercentage.toFixed(2)}%`}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Units to Add:</span>
+                            <span className="font-semibold md:font-normal text-primary md:text-foreground">
+                                {isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}
+                            </span>
+                        </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
                 <ResultDisplay label="Sum of Standardized %" value={sumOfStandardizedPercentage} unit="%" />
                 <ResultDisplay label="Sum of Calculated Units to Add" value={sumOfCalculatedUnitsToAdd} unit="Units" />
             </div>
-             { Math.abs(parseFloat(watchedTotalUnitsToAddToBatch) - sumOfCalculatedUnitsToAdd) > 0.001 && !isNaN(parseFloat(watchedTotalUnitsToAddToBatch)) && sumOfCalculatedUnitsToAdd > 0 && (
+             { Math.abs(parseFloat(watchedTotalUnitsToAddToBatch) - sumOfCalculatedUnitsToAdd) > 0.001 && !isNaN(parseFloat(watchedTotalUnitsToAddToBatch)) && sumOfCalculatedUnitsToAdd > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
                 <p className="text-sm text-orange-500">
                     Note: The sum of calculated units to add ({sumOfCalculatedUnitsToAdd.toFixed(3)}) does not exactly match the total units to add input ({parseFloat(watchedTotalUnitsToAddToBatch).toFixed(3)}). This may be due to rounding or if total original % is zero.
+                </p>
+            )}
+            { totalOriginalPercentage === 0 && watchedComponents.some(c => c.percentageFromTicket === '' || parseFloat(c.percentageFromTicket) === 0) && parseFloat(watchedTotalUnitsToAddToBatch) > 0 && (
+                 <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Enter component percentages from the batch ticket to calculate units to add. Total original percentage is currently zero.
                 </p>
             )}
           </div>
@@ -232,5 +268,4 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
-
-    
+        
