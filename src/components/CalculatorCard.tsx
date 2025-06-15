@@ -49,7 +49,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
     setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
 
     // Rainbow Animation Logic
-    const rainbowProbability = 0.01; 
+    const rainbowProbability = 0.01; // 1 in 100 chance
     const shouldAttemptRainbow = Math.random() < rainbowProbability;
     if (shouldAttemptRainbow) {
       const delayForRainbowToStartAfterFloatMs = 20 * 1000;
@@ -62,30 +62,35 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
     }
 
     // Glitch Animation Logic
-    const initialMinGlitchDelayMs = 10000; // 10 seconds base
-    const randomAdditionalGlitchMs = Math.random() * 10000; // 0 to 10 seconds additional
-    const actualInitialGlitchDelayMs = initialMinGlitchDelayMs + randomAdditionalGlitchMs;
-    const glitchDurationMs = 250; // Duration of the glitch animation
+    const initialGlitchProbability = 1 / 25; // 1 in 25 chance for the first glitch
+    const shouldAttemptInitialGlitch = Math.random() < initialGlitchProbability;
 
-    setCardGlitchStyle({ animationDelay: `${actualInitialGlitchDelayMs / 1000}s` });
-    setGlitchAnimationCount(1); // Trigger the first animation
+    if (shouldAttemptInitialGlitch) {
+      const baseMinGlitchDelayMs = 10000; // 10 seconds base
+      const randomAdditionalGlitchMs = Math.random() * 10000; // 0 to 10 seconds additional
+      const actualInitialGlitchDelayMs = baseMinGlitchDelayMs + randomAdditionalGlitchMs;
+      const glitchDurationMs = 250; // Duration of the glitch animation
 
-    const checkForSecondGlitch = () => {
-      if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
-      secondGlitchCheckTimerRef.current = setTimeout(() => {
-        const secondGlitchProbability = 0.20; // 1/5 chance
-        if (Math.random() < secondGlitchProbability) {
-          setCardGlitchStyle({ animationDelay: '0s' }); // Second glitch plays immediately
-          setGlitchAnimationCount(prevCount => prevCount + 1); // Re-trigger by changing key
-        }
-        // No further recursive checks for more glitches based on current request
-      }, 5000); // 5-second pause
-    };
-    
-    if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
-    firstGlitchTimerRef.current = setTimeout(() => {
-      checkForSecondGlitch();
-    }, actualInitialGlitchDelayMs + glitchDurationMs); // Schedule check after first glitch + its duration
+      setCardGlitchStyle({ animationDelay: `${actualInitialGlitchDelayMs / 1000}s` });
+      setGlitchAnimationCount(1); // Trigger the first animation
+
+      const checkForSecondGlitch = () => {
+        if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
+        secondGlitchCheckTimerRef.current = setTimeout(() => {
+          const secondGlitchProbability = 0.20; // 1/5 chance for second glitch
+          if (Math.random() < secondGlitchProbability) {
+            setCardGlitchStyle({ animationDelay: '0s' }); // Second glitch plays immediately
+            setGlitchAnimationCount(prevCount => prevCount + 1); // Re-trigger by changing key
+          }
+        }, 5000); // 5-second pause
+      };
+      
+      if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
+      firstGlitchTimerRef.current = setTimeout(() => {
+        checkForSecondGlitch();
+      }, actualInitialGlitchDelayMs + glitchDurationMs); // Schedule check after first glitch + its duration
+    }
+
 
     return () => {
       if (rainbowTimeoutRef.current) clearTimeout(rainbowTimeoutRef.current);
@@ -116,9 +121,9 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             key={`glitch-title-${glitchAnimationCount}`}
             className={cn(
               "text-lg font-semibold",
-              glitchAnimationCount > 0 && 'animate-glitch'
+              glitchAnimationCount > 0 && shouldAttemptInitialGlitch && 'animate-glitch'
             )}
-            style={cardGlitchStyle}
+            style={glitchAnimationCount > 0 && shouldAttemptInitialGlitch ? cardGlitchStyle : {}}
           >
             {calculator.name}
           </CardTitle>
@@ -130,3 +135,4 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
+
