@@ -9,7 +9,6 @@ import ResultDisplay from '@/components/calculators/ResultDisplay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle } from 'lucide-react';
 import type { BatchTicketComponentInput, CalculatedExcessComponent, Part2CalculatedValueComponent, SavedBatch } from '@/types';
 import { Separator } from '@/components/ui/separator';
@@ -41,6 +40,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const SAVED_BATCHES_KEY = 'chemcalc_savedFormulas_excessAndFull_v1';
 
@@ -558,35 +563,47 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         {displayResults.length > 0 && (
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
             <h3 className="text-xl font-semibold mb-3 text-primary">Calculated Results</h3>
-            <div className="overflow-x-auto">
-            <Table>
-            <TableHeader>
-                <TableRow>
-                <TableHead>Component Name</TableHead>
-                <TableHead className="text-right">Original %</TableHead>
-                <TableHead className="text-right">AV/OH</TableHead>
-                <TableHead className="text-right">Std. %</TableHead>
-                <TableHead className="text-right">Excess Units</TableHead>
-                <TableHead className="text-right">% of Add</TableHead>
-                <TableHead className="text-right"># to Add (Batch Wt.)</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {displayResults.map((comp, index) => (
-                <TableRow key={`display-${index}`}>
-                    <TableCell className="font-medium">{comp.name || `Component ${index + 1}`}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.percentageFromTicket) ? '-' : `${comp.percentageFromTicket.toFixed(2)}%`}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.avOrOhValue) ? '-' : comp.avOrOhValue.toString()}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.standardizedPercentage) ? '-' : `${comp.standardizedPercentage.toFixed(2)}%`}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}</TableCell>
-                    <TableCell className="text-right">{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(3)}%`}</TableCell>
-                    <TableCell className="text-right font-semibold text-primary">{isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(3)}</TableCell>
-                </TableRow>
-                ))}
-            </TableBody>
-            </Table>
+             <div className="flex p-2 mb-1 font-semibold text-sm text-muted-foreground border-b">
+                <div className="flex-1">Component Name</div>
+                <div className="w-1/3 md:w-1/4 text-right">% of Add</div>
+                <div className="w-1/3 md:w-1/4 text-right"># to Add (Batch Wt.)</div>
+                {/* Chevron is part of AccordionTrigger, no explicit header needed for it here, but ensure alignment */}
+                <div className="w-10 md:w-12 text-center"></div> 
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+            <Accordion type="single" collapsible className="w-full space-y-1">
+              {displayResults.map((comp, index) => (
+                <AccordionItem value={`item-${index}`} key={`display-accordion-${index}`} className="border rounded-md overflow-hidden shadow-sm">
+                  <AccordionTrigger className="flex w-full items-center p-3 hover:bg-muted/50 text-sm data-[state=open]:bg-muted/60 [&[data-state=open]>svg]:text-primary">
+                    <div className="flex-1 text-left font-medium">{comp.name || `Component ${index + 1}`}</div>
+                    <div className="w-1/3 md:w-1/4 text-right">{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(3)}%`}</div>
+                    <div className="w-1/3 md:w-1/4 text-right font-semibold text-primary">{isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(3)}</div>
+                     {/* AccordionTrigger's default chevron will appear at the end */}
+                  </AccordionTrigger>
+                  <AccordionContent className="p-4 bg-background border-t">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-sm">
+                      <div>
+                        <p className="font-medium text-muted-foreground">Original %:</p>
+                        <p className="text-foreground">{isNaN(comp.percentageFromTicket) ? '-' : `${comp.percentageFromTicket.toFixed(2)}%`}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-muted-foreground">AV/OH:</p>
+                        <p className="text-foreground">{isNaN(comp.avOrOhValue) ? '-' : comp.avOrOhValue.toString()}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-muted-foreground">Std. %:</p>
+                        <p className="text-foreground">{isNaN(comp.standardizedPercentage) ? '-' : `${comp.standardizedPercentage.toFixed(2)}%`}</p>
+                      </div>
+                      <div>
+                        <p className="font-medium text-muted-foreground">Excess Units:</p>
+                        <p className="text-foreground">{isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}</p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t mt-4">
                 <ResultDisplay label="Sum of Standardized %" value={sumOfStandardizedPercentage} unit="%" />
                 <ResultDisplay label="Sum of Calculated Excess Units" value={sumOfCalculatedExcessUnits} unit="Units" />
                 <ResultDisplay label="Sum of '# to Add (Batch Wt.)'" value={sumOfUnitsForTargetBatchWeight} unit="Units" variant="highlight"/>
