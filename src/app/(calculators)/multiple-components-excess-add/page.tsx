@@ -24,7 +24,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   const { register, control, watch, handleSubmit, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       totalUnitsToAddToBatch: '',
-      components: [{ name: '', percentageFromTicket: '' }],
+      components: [
+        { name: '', percentageFromTicket: '' },
+        { name: '', percentageFromTicket: '' },
+        { name: '', percentageFromTicket: '' },
+      ],
     },
   });
 
