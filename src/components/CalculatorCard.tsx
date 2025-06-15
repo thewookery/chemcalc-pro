@@ -35,15 +35,18 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   useEffect(() => {
     const minDelay = 25; // seconds
     const maxDelay = 40; // seconds
-    const randomFloatDelaySec = Math.random() * (maxDelay - minDelay) + minDelay;
+    // Calculate initial delay for the float animation only once
+    const initialFloatDelaySec = Math.random() * (maxDelay - minDelay) + minDelay;
     
-    setIconFloatStyle({ animationDelay: `${randomFloatDelaySec.toFixed(2)}s` });
+    setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
 
     // Schedule rainbow fade to start 20 seconds after the float animation begins
-    const rainbowStartDelayMs = (randomFloatDelaySec + 20) * 1000;
+    // The total delay from mount is initialFloatDelaySec (for float to start) + 20s (wait time)
+    const totalDelayForRainbowMs = (initialFloatDelaySec + 20) * 1000;
+    
     const rainbowTimerId = setTimeout(() => {
       setCanStartRainbow(true);
-    }, rainbowStartDelayMs);
+    }, totalDelayForRainbowMs);
 
     return () => {
       clearTimeout(rainbowTimerId); // Cleanup timer on unmount
@@ -58,10 +61,9 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             {IconComponent && (
               <IconComponent
                 className={cn(
-                  "h-8 w-8 transition-transform duration-300 ease-in-out animate-icon-float",
-                  !canStartRainbow && "text-primary", // Apply primary color only before rainbow starts
+                  "h-8 w-8 text-primary transition-transform duration-300 ease-in-out animate-icon-float",
                   "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none",
-                  canStartRainbow && "animate-rainbow-fade" // Conditionally apply rainbow animation
+                  canStartRainbow && "animate-rainbow-fade"
                 )}
                 style={iconFloatStyle} 
               />
