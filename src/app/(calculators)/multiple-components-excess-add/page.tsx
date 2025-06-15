@@ -684,7 +684,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
                   <li>
                     <strong>Batch Weight:</strong> Desired total weight for your final batch.
-                     <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 Units</span></div>
+                     <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 pounds</span></div>
                   </li>
                   <li>
                     <strong>Total Excess Units to Add:</strong> Total combined amount of *all excess components*.
