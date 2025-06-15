@@ -98,12 +98,11 @@ export default {
           '100%': { transform: 'translateY(0px)', opacity: '1' },
         },
         idleWiggle: {
-          '0%, 80%, 100%': { transform: 'rotate(0deg) scale(1)' },
-          '82%': { transform: 'rotate(-3deg) scale(1.05)' },
-          '84%': { transform: 'rotate(3deg) scale(1.05)' },
-          '86%': { transform: 'rotate(-2deg) scale(1.03)' },
-          '88%': { transform: 'rotate(2deg) scale(1.03)' },
-          '90%': { transform: 'rotate(0deg) scale(1)' },
+          '0%, 85%, 100%': { transform: 'rotate(0deg) scale(1)' }, // Idle for most of the time
+          '87%': { transform: 'rotate(-7deg) scale(1.1)' },        // Tilt left dramatically
+          '89%': { transform: 'rotate(7deg) scale(1.1)' },         // Tilt right dramatically
+          '91%': { transform: 'rotate(-3deg) scale(1.05)' },       // Settle a bit
+          '93%': { transform: 'rotate(3deg) scale(1.05)' },        // Settle a bit
         },
       },
       animation: {
