@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle } from 'lucide-react';
 import type { BatchTicketComponentInput, CalculatedExcessComponent, Part2CalculatedValueComponent, SavedBatch } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -41,16 +41,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const SAVED_BATCHES_KEY = 'chemcalc_savedFormulas_excessAndFull_v1';
 
 interface FormData {
+  targetBatchWeight: string; // Renamed from part2BatchWeight and moved up
   totalExcessUnitsToAdd: string;
   components: BatchTicketComponentInput[];
   saveFormulaName: string;
   referenceOriginalTotalBatchWeightForSave: string;
-  part2BatchWeight: string;
 }
 
 interface MaterialNameComboboxProps {
@@ -85,10 +84,10 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
 
   const handleSearchChange = (newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
-    onChange(newSearchTerm); // Update form with typed value
+    onChange(newSearchTerm); 
     if (onMaterialSelect) {
       const selectedMaterial = materials.find(m => m.name.toLowerCase() === newSearchTerm.toLowerCase()) || null;
-      onMaterialSelect(selectedMaterial); // Pass material if exact match, or null
+      onMaterialSelect(selectedMaterial); 
     }
   };
 
@@ -152,6 +151,15 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
   );
 };
 
+interface DisplayRow {
+  name: string;
+  percentageFromTicket: number;
+  avOrOhValue: number;
+  standardizedPercentage: number;
+  unitsToAdd: number; // Excess Units
+  percentageOfAdd: number;
+  unitsForBatchWeight: number; // # to add for Target Batch Wt.
+}
 
 const MultipleComponentsExcessAddPage: React.FC = () => {
   const { toast } = useToast();
@@ -160,6 +168,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   const { register, control, watch, handleSubmit, formState: { errors }, setValue, reset } = useForm<FormData>({
     defaultValues: {
+      targetBatchWeight: '', // Moved to top
       totalExcessUnitsToAdd: '',
       components: [
         { name: '', percentageFromTicket: '', avOrOhValue: '' },
@@ -168,7 +177,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       ],
       saveFormulaName: '',
       referenceOriginalTotalBatchWeightForSave: '',
-      part2BatchWeight: '',
     },
   });
 
@@ -179,19 +187,25 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   const watchedComponents = watch('components');
   const watchedTotalExcessUnitsToAdd = watch('totalExcessUnitsToAdd');
+  const watchedTargetBatchWeight = watch('targetBatchWeight'); // Renamed from watchedPart2BatchWeight
   const watchedReferenceOriginalTotalBatchWeightForSave = watch('referenceOriginalTotalBatchWeightForSave');
-  const watchedPart2BatchWeight = watch('part2BatchWeight');
 
+
+  // State for first stage calculations (Standardize & Excess Add)
   const [excessAddResults, setExcessAddResults] = useState<CalculatedExcessComponent[]>([]);
   const [totalOriginalPercentage, setTotalOriginalPercentage] = useState<number>(0);
   const [sumOfStandardizedPercentage, setSumOfStandardizedPercentage] = useState<number>(0);
   const [sumOfCalculatedExcessUnits, setSumOfCalculatedExcessUnits] = useState<number>(0);
 
-  const [part2Results, setPart2Results] = useState<Part2CalculatedValueComponent[]>([]);
-  const [sumOfPart2UnitsForBatchWeight, setSumOfPart2UnitsForBatchWeight] = useState<number | null>(null);
+  // State for second stage calculations (% of Add & Units for Target Batch Weight)
+  const [part2StyleResults, setPart2StyleResults] = useState<Part2CalculatedValueComponent[]>([]); // Renamed for clarity during refactor
+  const [sumOfUnitsForTargetBatchWeight, setSumOfUnitsForTargetBatchWeight] = useState<number | null>(null); // Renamed
+
+  // State for combined display table
+  const [displayResults, setDisplayResults] = useState<DisplayRow[]>([]);
 
 
-  // Part 1: Excess Add Calculation
+  // Effect 1: Standardize & Excess Add Calculation
   useEffect(() => {
     const parsedTotalExcessUnits = parseFloat(watchedTotalExcessUnitsToAdd);
     let currentTotalOriginalPerc = 0;
@@ -260,29 +274,31 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
 
-  // Part 2: Component Value Calculation ( (Excess Units / AV_OH) * 100 ) & ( (% of add / 100) * Batch Weight )
+  // Effect 2: % of Add & Units for Target Batch Weight Calculation
   useEffect(() => {
     const newPart2Results: Part2CalculatedValueComponent[] = [];
-    let currentSumOfPart2UnitsForBatchWeight = 0;
+    let currentSumOfUnitsForBatchWeight = 0;
     let allInputsValidForSum = true;
-    const parsedPart2BatchWeight = parseFloat(watchedPart2BatchWeight);
+    const parsedTargetBatchWeight = parseFloat(watchedTargetBatchWeight);
 
     excessAddResults.forEach(compFromPart1 => {
       const excessUnits = compFromPart1.unitsToAdd;
       const avOrOh = compFromPart1.avOrOhValue;
       let percentageOfAdd = NaN;
-      let unitsForBatchWeight = NaN;
+      let unitsForBatchWeightCalc = NaN;
 
       if (!isNaN(excessUnits) && excessUnits > 0 && !isNaN(avOrOh) && avOrOh !== 0) {
         percentageOfAdd = (excessUnits / avOrOh) * 100;
-        if (!isNaN(parsedPart2BatchWeight) && parsedPart2BatchWeight > 0 && !isNaN(percentageOfAdd)) {
-            unitsForBatchWeight = (percentageOfAdd / 100) * parsedPart2BatchWeight;
-            currentSumOfPart2UnitsForBatchWeight += unitsForBatchWeight;
+        if (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && !isNaN(percentageOfAdd)) {
+            unitsForBatchWeightCalc = (percentageOfAdd / 100) * parsedTargetBatchWeight;
+            if (!isNaN(unitsForBatchWeightCalc)) {
+                currentSumOfUnitsForBatchWeight += unitsForBatchWeightCalc;
+            }
         } else {
-            allInputsValidForSum = false; // If batch weight invalid, sum is incomplete
+            allInputsValidForSum = false; 
         }
       } else {
-        if (!isNaN(excessUnits) && excessUnits > 0) { // If excess units are there but AV/OH is missing/zero
+        if (!isNaN(excessUnits) && excessUnits > 0) { 
             allInputsValidForSum = false;
         }
       }
@@ -292,54 +308,70 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         excessUnits: isNaN(excessUnits) ? NaN : excessUnits,
         avOrOhValue: isNaN(avOrOh) ? NaN : avOrOh,
         percentageOfAdd: percentageOfAdd,
-        unitsForBatchWeight: unitsForBatchWeight,
+        unitsForBatchWeight: unitsForBatchWeightCalc,
       });
     });
 
-    setPart2Results(newPart2Results);
+    setPart2StyleResults(newPart2Results);
     
-    if (allInputsValidForSum && currentSumOfPart2UnitsForBatchWeight !== 0 && !isNaN(parsedPart2BatchWeight) && parsedPart2BatchWeight > 0) {
-        setSumOfPart2UnitsForBatchWeight(currentSumOfPart2UnitsForBatchWeight);
-    } else if (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (!isNaN(parsedPart2BatchWeight) && parsedPart2BatchWeight > 0))) {
-        // If there are excess units and a batch weight, but some inputs for calculation are missing, sum is null
-        setSumOfPart2UnitsForBatchWeight(allInputsValidForSum ? currentSumOfPart2UnitsForBatchWeight : null);
+    if (allInputsValidForSum && !isNaN(currentSumOfUnitsForBatchWeight) && !isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && newPart2Results.some(r => !isNaN(r.unitsForBatchWeight))) {
+        setSumOfUnitsForTargetBatchWeight(currentSumOfUnitsForBatchWeight);
+    } else if (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0))) {
+        setSumOfUnitsForTargetBatchWeight(allInputsValidForSum ? currentSumOfUnitsForBatchWeight : null);
     } else {
-        setSumOfPart2UnitsForBatchWeight(null);
+        setSumOfUnitsForTargetBatchWeight(null);
     }
 
-  }, [excessAddResults, watchedPart2BatchWeight]);
+  }, [excessAddResults, watchedTargetBatchWeight]);
+
+  // Effect 3: Combine results from Effect 1 and Effect 2 for unified display
+  useEffect(() => {
+    const combined: DisplayRow[] = excessAddResults.map((exRes, index) => {
+      const p2Res = part2StyleResults[index] || { percentageOfAdd: NaN, unitsForBatchWeight: NaN };
+      return {
+        name: exRes.name,
+        percentageFromTicket: exRes.percentageFromTicket,
+        avOrOhValue: exRes.avOrOhValue,
+        standardizedPercentage: exRes.standardizedPercentage,
+        unitsToAdd: exRes.unitsToAdd,
+        percentageOfAdd: p2Res.percentageOfAdd,
+        unitsForBatchWeight: p2Res.unitsForBatchWeight,
+      };
+    });
+    setDisplayResults(combined);
+  }, [excessAddResults, part2StyleResults]);
 
 
-  const formula = "Part 1 (Excess Add): Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\nPart 2 (Component Value): % of Add = (Excess Units / AV/OH) * 100. # to Add = (% of Add / 100) * Part 2 Batch Wt.";
+  const formula = `1. Std. % = (Comp. % / Total Orig. %) * 100.\n2. Excess Units = (Std. % / 100) * Total Excess Units.\n3. % of Add = (Excess Units / AV_OH) * 100.\n4. # to Add (for Target Wt.) = (% of Add / 100) * Target Batch Wt.`;
 
   const resultsToCopy = useMemo(() => {
-    let text = `Multiple Components Calculation:\n\n== Part 1: Excess Add Calculation ==\n`;
-    text += `Components (% from Batch Ticket & AV/OH):\n`;
+    let text = `Multiple Components Calculation:\n\n`;
+    text += `Target Batch Weight: ${watchedTargetBatchWeight}\n`;
+    text += `Total Excess Units to Add to Batch: ${watchedTotalExcessUnitsToAdd}\n\n`;
+    text += `Components (Original % from Batch Ticket & AV/OH):\n`;
     watchedComponents.forEach((comp, index) => {
       text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}% (AV/OH: ${comp.avOrOhValue || 'N/A'})\n`;
     });
-    text += `Total Original % from Batch Ticket: ${totalOriginalPercentage.toFixed(2)}%\n`;
-    text += `Total Excess Units to Add to Batch: ${watchedTotalExcessUnitsToAdd}\n\n`;
-    text += `Calculated Excess Breakdown:\n`;
-    text += `Component Name | % from Ticket | Standardized % | Excess Units to Add\n`;
-    text += `-----------------------------------------------------------------------\n`;
-    excessAddResults.forEach(res => {
-      text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(13) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(13)} | ${isNaN(res.standardizedPercentage) ? 'N/A'.padEnd(14) : (res.standardizedPercentage.toFixed(2) + '%').padEnd(14)} | ${isNaN(res.unitsToAdd) ? 'N/A' : res.unitsToAdd.toFixed(3)}\n`;
+    text += `Total Original % from Batch Ticket: ${totalOriginalPercentage.toFixed(2)}%\n\n`;
+
+    text += `Calculated Breakdown:\n`;
+    text += `Comp. Name | Orig. % | AV/OH | Std. % | Excess Units | % of Add | # to Add (Target Wt.)\n`;
+    text += `--------------------------------------------------------------------------------------------\n`;
+    displayResults.forEach(res => {
+      text += `${(res.name || '-').padEnd(12)} | `
+      text += `${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(7) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(7)} | `
+      text += `${isNaN(res.avOrOhValue) ? 'N/A'.padEnd(5) : res.avOrOhValue.toString().padEnd(5)} | `
+      text += `${isNaN(res.standardizedPercentage) ? 'N/A'.padEnd(6) : (res.standardizedPercentage.toFixed(2) + '%').padEnd(6)} | `
+      text += `${isNaN(res.unitsToAdd) ? 'N/A'.padEnd(12) : res.unitsToAdd.toFixed(3).padEnd(12)} | `
+      text += `${isNaN(res.percentageOfAdd) ? 'N/A'.padEnd(8) : (res.percentageOfAdd.toFixed(3) + '%').padEnd(8)} | `
+      text += `${isNaN(res.unitsForBatchWeight) ? 'N/A' : res.unitsForBatchWeight.toFixed(3)}\n`;
     });
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
     text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
-
-    text += `\n\n== Part 2: Final Component Amounts for Batch ==\n`;
-    text += `Part 2 Target Batch Weight: ${watchedPart2BatchWeight}\n`;
-    text += `Component Name | Excess Units | AV/OH | % of add | # to add (for Batch Wt.)\n`;
-    text += `------------------------------------------------------------------------------------\n`;
-    part2Results.forEach(res => {
-      text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.excessUnits) ? 'N/A'.padEnd(12) : res.excessUnits.toFixed(3).padEnd(12)} | ${isNaN(res.avOrOhValue) ? 'N/A'.padEnd(5) : res.avOrOhValue.toString().padEnd(5)} | ${isNaN(res.percentageOfAdd) ? 'N/A'.padEnd(8) : (res.percentageOfAdd.toFixed(3) + '%').padEnd(8)} | ${isNaN(res.unitsForBatchWeight) ? 'N/A' : res.unitsForBatchWeight.toFixed(3)}\n`;
-    });
-    text += `\nSum of Part 2 '# to add (for Batch Wt.)' Values: ${sumOfPart2UnitsForBatchWeight !== null && !isNaN(sumOfPart2UnitsForBatchWeight) ? sumOfPart2UnitsForBatchWeight.toFixed(3) : 'N/A'}\n`;
+    text += `Sum of '# to add (for Target Wt.)' Values: ${sumOfUnitsForTargetBatchWeight !== null && !isNaN(sumOfUnitsForTargetBatchWeight) ? sumOfUnitsForTargetBatchWeight.toFixed(3) : 'N/A'}\n`;
 
     return text;
-  }, [watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, excessAddResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, part2Results, sumOfPart2UnitsForBatchWeight, watchedPart2BatchWeight]);
+  }, [watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, displayResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, sumOfUnitsForTargetBatchWeight]);
 
   const handleSaveFormula = () => {
     const formulaName = watch('saveFormulaName');
@@ -362,7 +394,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         .filter(c => c.name && c.percentageFromTicket && !isNaN(parseFloat(c.percentageFromTicket)))
         .map(c => ({
             name: c.name,
-            standardPercentage: parseFloat(c.percentageFromTicket), // Save the original input percentage
+            standardPercentage: parseFloat(c.percentageFromTicket),
             avOrOhValue: c.avOrOhValue && !isNaN(parseFloat(c.avOrOhValue)) ? parseFloat(c.avOrOhValue) : undefined
         }));
 
@@ -388,6 +420,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const formulaToLoad = savedFormulas.find(f => f.id === formulaId);
     if (formulaToLoad) {
       reset({
+        targetBatchWeight: '', // Reset target batch weight on load
         totalExcessUnitsToAdd: '', 
         components: formulaToLoad.components.map(c => ({
              name: c.name,
@@ -396,7 +429,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         })),
         saveFormulaName: '',
         referenceOriginalTotalBatchWeightForSave: String(formulaToLoad.originalStandardTotalBatchWeight),
-        part2BatchWeight: '', // Reset Part 2 batch weight on load
       });
       setSelectedFormulaToLoad('');
       toast({ title: "Formula Loaded", description: `Data for "${formulaToLoad.name}" has been loaded.` });
@@ -412,280 +444,178 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   return (
     <CalculatorWrapper
       title="Multiple Components Calculator"
-      description="Part 1: Standardize component percentages for excess add. Part 2: Calculate final component amounts for a target batch weight using AV/OH values."
+      description="Define components, calculate excess additions, and determine full batch component weights based on a target batch size."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
       <form onSubmit={handleSubmit(() => { /* Calculations are real-time */ })} className="space-y-8">
-        {/* Part 1: Excess Add Section */}
+        
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-            <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Excess Add Calculation</h3>
-            <div>
-                <Label className="text-lg font-semibold">Component Details</Label>
-                <p className="text-sm text-muted-foreground mb-3">Enter each component, its original batch ticket %, and its AV/OH value (for Part 2).</p>
-                {fields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-background/50 shadow-sm">
-                    <div className="space-y-1">
-                        <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
-                        <Controller
-                        control={control}
-                        name={`components.${index}.name`}
-                        defaultValue=""
-                        render={({ field: { onChange, value } }) => (
-                            <MaterialNameCombobox
-                            id={`components.${index}.name`}
-                            value={value}
-                            onChange={onChange}
-                            materials={materialsList}
-                            placeholder={`Component ${index + 1}`}
-                            onMaterialSelect={(material) => {
-                                if (material) {
-                                    setValue(`components.${index}.avOrOhValue`, material.value.toString(), { shouldValidate: true, shouldDirty: true });
-                                } else {
-                                     // If custom name, don't clear AV/OH if user might be typing it
-                                }
-                            }}
-                            />
-                        )}
-                        />
-                        {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
-                    </div>
-
-                    <CommonInput
-                        id={`components.${index}.percentageFromTicket`}
-                        label="Batch Ticket %"
-                        className="h-9 calculator-input text-input-foreground"
-                        unit="%"
-                        placeholder="e.g., 78.89"
-                        {...register(`components.${index}.percentageFromTicket`, {
-                            setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
-                            validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "% must be positive or empty"
-                        })}
-                        errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
-                    />
-
-                    <CommonInput
-                        id={`components.${index}.avOrOhValue`}
-                        label="AV/OH Value"
-                        className="h-9 calculator-input text-input-foreground"
-                        placeholder="e.g., 389"
-                        tooltipText="Acid Value or Hydroxyl Value of this material. Used in Part 2. Pre-fills if material is selected."
-                        {...register(`components.${index}.avOrOhValue`, {
-                            setValueAs: (v) => v === "" ? "" : (parseFloat(v).toString()), // Allow any number, including 0
-                            validate: value => value === "" || (!isNaN(parseFloat(value))) || "Must be a number or empty"
-                        })}
-                        errorMessage={errors.components?.[index]?.avOrOhValue?.message}
-                    />
-
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                    </div>
-                ))}
-                <div className="flex justify-between items-center mt-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', percentageFromTicket: '', avOrOhValue: '' })}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Component
-                    </Button>
-                    <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Total Original % from Ticket:</p>
-                        <p className="text-lg font-semibold">{totalOriginalPercentage.toFixed(2)}%</p>
-                    </div>
-                </div>
+            <h3 className="text-xl font-semibold mb-3 text-primary">Overall Batch Parameters</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CommonInput
+                id="targetBatchWeight"
+                label="Target Batch Weight (for Final Calculation)"
+                unit="Units"
+                {...register('targetBatchWeight', {
+                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
+                    validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
+                })}
+                placeholder="e.g., 1000"
+                tooltipText="The total weight for the final batch calculation using % of add values."
+                errorMessage={errors.targetBatchWeight?.message}
+                />
+                <CommonInput
+                id="totalExcessUnitsToAdd"
+                label="Total Excess Units to Add"
+                unit="Units"
+                {...register('totalExcessUnitsToAdd', {
+                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
+                    validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
+                })}
+                placeholder="e.g., 20"
+                tooltipText="The total combined amount of all excess components you intend to add."
+                errorMessage={errors.totalExcessUnitsToAdd?.message}
+                />
             </div>
-
-            <Separator />
-
-            <CommonInput
-            id="totalExcessUnitsToAdd"
-            label="Total Excess Units to Add to Batch"
-            unit="Units"
-            {...register('totalExcessUnitsToAdd', {
-                setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
-                validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
-            })}
-            placeholder="e.g., 20"
-            tooltipText="The total combined amount of all excess components you intend to add for Part 1."
-            errorMessage={errors.totalExcessUnitsToAdd?.message}
-            />
-
-
-            {excessAddResults.length > 0 && (
-            <div className="mt-6 space-y-4">
-                <h3 className="text-lg font-semibold">Part 1 Results: Calculated Excess Breakdown</h3>
-                <Table>
-                <TableHeader className="hidden md:table-header-group">
-                    <TableRow>
-                    <TableHead>Component Name</TableHead>
-                    <TableHead className="text-right">Original %</TableHead>
-                    <TableHead className="text-right">Std. %</TableHead>
-                    <TableHead className="text-right">Excess Units to Add</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {excessAddResults.map((comp, index) => (
-                    <TableRow
-                        key={`part1-${index}`}
-                        className="block md:table-row mb-4 md:mb-0 p-3 md:p-0 border rounded-lg md:border-b md:border-0 md:rounded-none shadow-md md:shadow-none last:mb-0 md:last:mb-0"
-                    >
-                        <TableCell className="block md:table-cell p-1 md:p-4 font-medium">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">Name:</span>
-                                <span>{comp.name || `Component ${index + 1}`}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">Original %:</span>
-                                <span>{isNaN(comp.percentageFromTicket) ? '-' : `${comp.percentageFromTicket.toFixed(2)}%`}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">Std. %:</span>
-                                <span>{isNaN(comp.standardizedPercentage) ? '-' : `${comp.standardizedPercentage.toFixed(2)}%`}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">Excess Units:</span>
-                                <span className="font-semibold md:font-normal text-primary md:text-foreground">
-                                    {isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}
-                                </span>
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                    <ResultDisplay label="Sum of Standardized %" value={sumOfStandardizedPercentage} unit="%" />
-                    <ResultDisplay label="Sum of Calculated Excess Units" value={sumOfCalculatedExcessUnits} unit="Units" />
-                </div>
-                { Math.abs(parseFloat(watchedTotalExcessUnitsToAdd) - sumOfCalculatedExcessUnits) > 0.001 && !isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) && sumOfCalculatedExcessUnits > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
-                    <p className="text-sm text-orange-500">
-                        Note: The sum of calculated excess units ({sumOfCalculatedExcessUnits.toFixed(3)}) does not exactly match the total excess units input ({!isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) ? parseFloat(watchedTotalExcessUnitsToAdd).toFixed(3) : 'N/A'}). This may be due to rounding or if total original % is zero.
-                    </p>
-                )}
-                { totalOriginalPercentage === 0 && watchedComponents.some(c => c.percentageFromTicket === '' || parseFloat(c.percentageFromTicket) === 0) && parseFloat(watchedTotalExcessUnitsToAdd) > 0 && (
-                    <p className="text-sm text-amber-600 dark:text-amber-400">
-                        Enter component percentages from the batch ticket to calculate excess units. Total original percentage is currently zero.
-                    </p>
-                )}
-            </div>
-            )}
         </section>
 
         <Separator />
 
-        {/* Part 2: Component Value Calculation ((Excess Units / AV_OH) * 100) and ((% of add / 100) * Batch Wt) */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-          <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Final Component Amounts for Batch</h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            This section uses "Excess Units to Add" (Part 1), AV/OH (Part 1 inputs), and a target batch weight for Part 2.<br/>
-            Calculates: (% of Add) = (Excess Units / AV/OH) * 100.<br/>
-            Then: (# to Add for Batch Wt.) = (% of Add / 100) * Part 2 Target Batch Weight.
-          </p>
+            <h3 className="text-xl font-semibold mb-3 text-primary">Component Details</h3>
+            <p className="text-sm text-muted-foreground mb-3">Enter each component, its original batch ticket %, and its AV/OH value.</p>
+            {fields.map((field, index) => (
+                <div key={field.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-background/50 shadow-sm">
+                <div className="space-y-1">
+                    <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
+                    <Controller
+                    control={control}
+                    name={`components.${index}.name`}
+                    defaultValue=""
+                    render={({ field: { onChange, value } }) => (
+                        <MaterialNameCombobox
+                        id={`components.${index}.name`}
+                        value={value}
+                        onChange={onChange}
+                        materials={materialsList}
+                        placeholder={`Component ${index + 1}`}
+                        onMaterialSelect={(material) => {
+                            if (material) {
+                                setValue(`components.${index}.avOrOhValue`, material.value.toString(), { shouldValidate: true, shouldDirty: true });
+                            }
+                        }}
+                        />
+                    )}
+                    />
+                    {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
+                </div>
 
-          <CommonInput
-            id="part2BatchWeight"
-            label="Part 2 Target Batch Weight"
-            unit="Units"
-            {...register('part2BatchWeight', {
-                setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
-                validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
-            })}
-            placeholder="e.g., 1000"
-            tooltipText="Enter the total weight for this Part 2 batch calculation."
-            errorMessage={errors.part2BatchWeight?.message}
-          />
+                <CommonInput
+                    id={`components.${index}.percentageFromTicket`}
+                    label="Batch Ticket %"
+                    className="h-9 calculator-input text-input-foreground"
+                    unit="%"
+                    placeholder="e.g., 78.89"
+                    {...register(`components.${index}.percentageFromTicket`, {
+                        setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
+                        validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "% must be positive or empty"
+                    })}
+                    errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
+                />
 
+                <CommonInput
+                    id={`components.${index}.avOrOhValue`}
+                    label="AV/OH Value"
+                    className="h-9 calculator-input text-input-foreground"
+                    placeholder="e.g., 389"
+                    tooltipText="Acid Value or Hydroxyl Value of this material. Pre-fills if material is selected."
+                    {...register(`components.${index}.avOrOhValue`, {
+                        setValueAs: (v) => v === "" ? "" : (parseFloat(v).toString()), 
+                        validate: value => value === "" || (!isNaN(parseFloat(value))) || "Must be a number or empty"
+                    })}
+                    errorMessage={errors.components?.[index]?.avOrOhValue?.message}
+                />
 
-          {part2Results.length > 0 && (
-            <div className="mt-6 space-y-4">
-              <h3 className="text-lg font-semibold">Part 2 Results: Calculated Component Values</h3>
-              <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader className="hidden md:table-header-group">
-                    <TableRow>
-                        <TableHead>Component Name</TableHead>
-                        <TableHead className="text-right">Excess Units</TableHead>
-                        <TableHead className="text-right">AV/OH</TableHead>
-                        <TableHead className="text-right">% of add</TableHead>
-                        <TableHead className="text-right"># to add (Batch Wt.)</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {part2Results.map((comp, index) => (
-                        <TableRow
-                        key={`part2-${index}`}
-                        className="block md:table-row mb-4 md:mb-0 p-3 md:p-0 border rounded-lg md:border-b md:border-0 md:rounded-none shadow-md md:shadow-none last:mb-0 md:last:mb-0"
-                        >
-                        <TableCell className="block md:table-cell p-1 md:p-4 font-medium">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">Name:</span>
-                                <span>{comp.name || `Component ${index + 1}`}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">Excess Units:</span>
-                                <span>{isNaN(comp.excessUnits) ? '-' : comp.excessUnits.toFixed(3)}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">AV/OH:</span>
-                                <span>{isNaN(comp.avOrOhValue) ? '-' : comp.avOrOhValue.toString()}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden">% of add:</span>
-                                <span>{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(3)}%`}</span>
-                            </div>
-                        </TableCell>
-                         <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
-                            <div className="flex justify-between items-center md:block">
-                                <span className="text-sm font-semibold text-muted-foreground md:hidden"># to add (Batch Wt.):</span>
-                                <span className="font-semibold md:font-normal text-primary md:text-foreground">
-                                    {isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(3)}
-                                </span>
-                            </div>
-                        </TableCell>
-                        </TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-                <ResultDisplay label="Sum of Part 2 '# to add (for Batch Wt.)'" value={sumOfPart2UnitsForBatchWeight} unit="Units" />
-              </div>
-              {part2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
-                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter a non-zero AV/OH value for components with excess units to see Part 2 calculations. Division by zero is not performed.
-                </p>
-              )}
-               {part2Results.some(r => !isNaN(r.percentageOfAdd) && (isNaN(parseFloat(watchedPart2BatchWeight)) || parseFloat(watchedPart2BatchWeight) <= 0)) && (
-                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter a valid Part 2 Target Batch Weight to calculate final '# to add' values.
-                </p>
-              )}
+                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+                </div>
+            ))}
+            <div className="flex justify-between items-center mt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', percentageFromTicket: '', avOrOhValue: '' })}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Component
+                </Button>
+                <div className="text-right">
+                    <p className="text-sm text-muted-foreground">Total Original % from Ticket:</p>
+                    <p className="text-lg font-semibold">{totalOriginalPercentage.toFixed(2)}%</p>
+                </div>
             </div>
-          )}
-          {part2Results.length === 0 && excessAddResults.length > 0 && (
-             <p className="text-sm text-muted-foreground">
-                Enter "Total Excess Units to Add" in Part 1 and AV/OH values for components to see Part 2 calculations.
-            </p>
-          )}
-           {excessAddResults.every(comp => isNaN(comp.unitsToAdd) || comp.unitsToAdd <= 0) && watchedTotalExcessUnitsToAdd && parseFloat(watchedTotalExcessUnitsToAdd) > 0 && (
-             <p className="text-sm text-muted-foreground">
-                Enter component percentages in Part 1 to calculate excess units, which are then used for Part 2 calculations.
-            </p>
-          )}
         </section>
+        
+        <Separator />
+
+        {displayResults.length > 0 && (
+        <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <h3 className="text-xl font-semibold mb-3 text-primary">Calculated Results</h3>
+            <div className="overflow-x-auto">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead>Component Name</TableHead>
+                <TableHead className="text-right">Original %</TableHead>
+                <TableHead className="text-right">AV/OH</TableHead>
+                <TableHead className="text-right">Std. %</TableHead>
+                <TableHead className="text-right">Excess Units</TableHead>
+                <TableHead className="text-right">% of Add</TableHead>
+                <TableHead className="text-right"># to Add (Target Wt.)</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {displayResults.map((comp, index) => (
+                <TableRow key={`display-${index}`}>
+                    <TableCell className="font-medium">{comp.name || `Component ${index + 1}`}</TableCell>
+                    <TableCell className="text-right">{isNaN(comp.percentageFromTicket) ? '-' : `${comp.percentageFromTicket.toFixed(2)}%`}</TableCell>
+                    <TableCell className="text-right">{isNaN(comp.avOrOhValue) ? '-' : comp.avOrOhValue.toString()}</TableCell>
+                    <TableCell className="text-right">{isNaN(comp.standardizedPercentage) ? '-' : `${comp.standardizedPercentage.toFixed(2)}%`}</TableCell>
+                    <TableCell className="text-right">{isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}</TableCell>
+                    <TableCell className="text-right">{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(3)}%`}</TableCell>
+                    <TableCell className="text-right font-semibold text-primary">{isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(3)}</TableCell>
+                </TableRow>
+                ))}
+            </TableBody>
+            </Table>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
+                <ResultDisplay label="Sum of Standardized %" value={sumOfStandardizedPercentage} unit="%" />
+                <ResultDisplay label="Sum of Calculated Excess Units" value={sumOfCalculatedExcessUnits} unit="Units" />
+                <ResultDisplay label="Sum of '# to Add (Target Wt.)'" value={sumOfUnitsForTargetBatchWeight} unit="Units" variant="highlight"/>
+            </div>
+            {/* Warning Messages */}
+            { Math.abs(parseFloat(watchedTotalExcessUnitsToAdd) - sumOfCalculatedExcessUnits) > 0.001 && !isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) && sumOfCalculatedExcessUnits > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
+                <p className="text-sm text-orange-500">
+                    Note: Sum of calculated excess units ({sumOfCalculatedExcessUnits.toFixed(3)}) may not exactly match total excess units input due to rounding or if total original % is zero.
+                </p>
+            )}
+            { totalOriginalPercentage === 0 && watchedComponents.some(c => c.percentageFromTicket === '' || parseFloat(c.percentageFromTicket) === 0) && parseFloat(watchedTotalExcessUnitsToAdd) > 0 && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Enter component percentages from the batch ticket to calculate excess units. Total original percentage is currently zero.
+                </p>
+            )}
+            { displayResults.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
+                 <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Enter a non-zero AV/OH value for components with excess units to calculate '% of Add' and subsequent '# to Add'.
+                </p>
+            )}
+            {displayResults.some(r => !isNaN(r.percentageOfAdd) && (isNaN(parseFloat(watchedTargetBatchWeight)) || parseFloat(watchedTargetBatchWeight) <= 0)) && (
+                 <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Enter a valid Target Batch Weight to calculate final '# to add' values.
+                </p>
+            )}
+        </section>
+        )}
       </form>
 
-      {/* Save/Load Section */}
       <div className="mt-8 pt-6 border-t">
         <h3 className="text-lg font-medium mb-3">Manage Saved Formulas</h3>
         <div className="space-y-4 p-4 border rounded-md bg-muted/30">
