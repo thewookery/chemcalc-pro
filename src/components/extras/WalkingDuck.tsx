@@ -3,34 +3,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
+// Updated SVG to be head-only
 const DuckSVG: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-12 h-12 md:w-16 md:h-16">
-    {/* Body: Made more rounded, added a slight tail flick */}
-    <path 
-      fill="#FFD700" 
-      stroke="#B28900" 
-      strokeWidth="3" 
-      d="M15,75 
-         Q20,50 40,60 
-         T65,60 
-         Q85,50 90,70 
-         Q100,80 80,90 
-         C70,95 60,93 50,90 
-         C40,93 30,95 20,90 
-         Q0,80 15,75 Z" 
-    />
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30" className="w-12 h-12 md:w-16 md:h-16">
     {/* Head */}
-    <circle fill="#FFD700" stroke="#B28900" strokeWidth="3" cx="80" cy="45" r="15" />
-    {/* New Eyes 👀 style */}
-    <circle fill="#FFFFFF" cx="76" cy="43" r="4.5" />
-    <circle fill="#000000" cx="77" cy="43" r="2.2" /> 
-    <circle fill="#FFFFFF" cx="86" cy="43" r="4.5" />
-    <circle fill="#000000" cx="87" cy="43" r="2.2" />
-    {/* Beak */}
-    <polygon fill="#FFA500" stroke="#B28900" strokeWidth="1.5" points="93,43 103,48 93,53" />
-    {/* Simple static feet for a tiny duck */}
-    <rect fill="#FFA500" stroke="#B28900" strokeWidth="1" x="35" y="88" width="10" height="7" rx="2"/>
-    <rect fill="#FFA500" stroke="#B28900" strokeWidth="1" x="60" y="88" width="10" height="7" rx="2"/>
+    <circle fill="#FFD700" stroke="#B28900" strokeWidth="1.5" cx="15" cy="15" r="14" />
+    {/* Eyes (Emoji Style "👀") - adjusted for new viewBox */}
+    <circle fill="#FFFFFF" cx="11" cy="13" r="4.5" />
+    <circle fill="#000000" cx="12" cy="13" r="2.2" /> 
+    <circle fill="#FFFFFF" cx="21" cy="13" r="4.5" />
+    <circle fill="#000000" cx="22" cy="13" r="2.2" />
+    {/* Beak - adjusted for new viewBox */}
+    <polygon fill="#FFA500" stroke="#B28900" strokeWidth="1" points="28,13 38,18 28,23" />
   </svg>
 );
 
@@ -44,15 +28,16 @@ interface PeekPosition {
 const PEEK_TRANSITION_DURATION = 500; // ms
 const PEEK_VISIBLE_DURATION = 1500; // ms
 
+// Adjusted visibleTransforms to show ~90% of the head
 const peekPositions: PeekPosition[] = [
-  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[70%]' },
-  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[70%]' },
-  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[70%]' },
-  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[70%]' },
-  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[70%]' },
-  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[70%]' },
-  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[70%]' },
-  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[70%]' },
+  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]' },
+  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]' },
+  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]' },
+  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[10%]' },
+  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[10%]' },
+  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]' },
+  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]' },
+  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]' },
 ];
 
 
