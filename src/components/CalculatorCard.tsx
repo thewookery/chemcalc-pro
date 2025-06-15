@@ -18,8 +18,8 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
         <CardHeader>
           <div className="flex items-center justify-between mb-2">
             {IconComponent && <IconComponent className={cn(
-              "h-8 w-8 text-primary transition-transform duration-300 ease-in-out animate-icon-float", // Added animate-icon-float
-              "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none" // Stop float on hover
+              "h-8 w-8 text-primary transition-transform duration-300 ease-in-out animate-icon-float [animation-delay:60s]",
+              "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none" 
             )} />}
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
           </div>
@@ -32,3 +32,4 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
+
