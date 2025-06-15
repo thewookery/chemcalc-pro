@@ -49,5 +49,7 @@ export interface Part2CalculatedValueComponent {
   name: string;
   excessUnits: number; // from Part 1
   avOrOhValue: number; // from input
-  calculatedValue: number; // excessUnits * avOrOhValue
+  percentageOfAdd: number; // (Excess Units / AV_OH) * 100
+  unitsForBatchWeight?: number; // (percentageOfAdd / 100) * part2BatchWeight
 }
+
