@@ -1,3 +1,13 @@
-// This file is intentionally left blank as it is being deleted.
-// The "Batch Caustic Add Calculator" functionality is considered a duplicate or no longer needed.
-// Its route and references from the homepage (src/app/page.tsx) will also be removed.
+
+// This calculator has been removed as it was a duplicate.
+// The route still exists but its link from the homepage has been removed.
+export default function RemovedBatchCausticAddPage() {
+  return (
+    <div className="p-4 text-center">
+      <h1 className="text-2xl font-semibold mb-4">Calculator Removed</h1>
+      <p className="text-muted-foreground">
+        The "Batch Caustic Add Calculator" has been removed from the application.
+      </p>
+    </div>
+  );
+}
