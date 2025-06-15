@@ -1,7 +1,7 @@
+
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ResultDisplayProps {
   label: string;
@@ -11,6 +11,7 @@ interface ResultDisplayProps {
   isError?: boolean;
   errorMessage?: string;
   variant?: 'default' | 'highlight';
+  valueClassName?: string; // New prop for custom value styling
 }
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({
@@ -21,6 +22,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
   isError = false,
   errorMessage = "Error",
   variant = 'default',
+  valueClassName,
 }) => {
   let displayValue: string;
 
@@ -31,15 +33,20 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({
   } else if (value === null || value === undefined || value === "" || Number.isNaN(Number(value))) {
     displayValue = "-";
   } else {
-    // Attempt to format to a reasonable number of decimal places if it's a number
     const numValue = Number(value);
     displayValue = Number.isFinite(numValue) ? numValue.toLocaleString(undefined, { maximumFractionDigits: 4 }) : String(value);
   }
 
+  const determinedValueClassName = isError 
+    ? 'text-destructive' 
+    : valueClassName 
+      ? valueClassName 
+      : (variant === 'highlight' ? 'text-primary' : 'text-foreground');
+
   return (
     <div className={`p-4 rounded-md ${variant === 'highlight' ? 'bg-primary/10' : 'bg-muted/50'}`}>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-semibold ${isError ? 'text-destructive' : (variant === 'highlight' ? 'text-primary' : 'text-foreground')}`}>
+      <p className={`text-2xl font-semibold ${determinedValueClassName}`}>
         {displayValue} {unit && displayValue !== "-" && !isLoading && !isError ? unit : ""}
       </p>
     </div>

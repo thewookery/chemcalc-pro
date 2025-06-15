@@ -114,7 +114,6 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
       </PopoverTrigger>
       <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0 max-h-[200px] overflow-y-auto"
-        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <Command
           filter={(itemValue, search) => {
@@ -195,21 +194,17 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   const watchedReferenceOriginalTotalBatchWeightForSave = watch('referenceOriginalTotalBatchWeightForSave');
 
 
-  // State for first stage calculations (Standardize & Excess Add)
   const [excessAddResults, setExcessAddResults] = useState<CalculatedExcessComponent[]>([]);
   const [totalOriginalPercentage, setTotalOriginalPercentage] = useState<number>(0);
   const [sumOfStandardizedPercentage, setSumOfStandardizedPercentage] = useState<number>(0);
   const [sumOfCalculatedExcessUnits, setSumOfCalculatedExcessUnits] = useState<number>(0);
 
-  // State for second stage calculations (% of Add & Units for Target Batch Weight)
   const [part2Results, setPart2Results] = useState<Part2CalculatedValueComponent[]>([]);
   const [sumOfUnitsForTargetBatchWeight, setSumOfUnitsForTargetBatchWeight] = useState<number | null>(null);
 
-  // State for combined display table
   const [displayResults, setDisplayResults] = useState<DisplayRow[]>([]);
 
 
-  // Effect 1: Standardize & Excess Add Calculation
   useEffect(() => {
     const parsedTotalExcessUnits = parseFloat(watchedTotalExcessUnitsToAdd);
     let currentTotalOriginalPerc = 0;
@@ -236,7 +231,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           currentSumOfStandardizedPerc += standardizedPerc;
 
           let unitsForThisComponent = NaN;
-          if (!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits > 0) {
+          if (!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits >= 0) { // Allow 0 excess units
             unitsForThisComponent = (standardizedPerc / 100) * parsedTotalExcessUnits;
             if(!isNaN(unitsForThisComponent)) {
                  currentSumOfExcessUnits += unitsForThisComponent;
@@ -274,11 +269,10 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     setExcessAddResults(tempResults);
     setSumOfStandardizedPercentage(currentSumOfStandardizedPerc);
-    setSumOfCalculatedExcessUnits((!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits > 0) ? currentSumOfExcessUnits : 0);
+    setSumOfCalculatedExcessUnits((!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits >= 0) ? currentSumOfExcessUnits : 0);
 
   }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
 
-  // Effect 2: % of Add & Units for Target Batch Weight Calculation
   useEffect(() => {
     const newPart2Results: Part2CalculatedValueComponent[] = [];
     let currentSumOfUnitsForBatchWeight = 0;
@@ -291,18 +285,20 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       let percentageOfAdd = NaN;
       let unitsForBatchWeightCalc = NaN;
 
-      if (!isNaN(excessUnits) && !isNaN(avOrOh) && avOrOh !== 0) { // excessUnits can be 0
+      if (!isNaN(excessUnits) && !isNaN(avOrOh) && avOrOh !== 0) { 
         percentageOfAdd = (excessUnits / avOrOh) * 100;
         if (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && !isNaN(percentageOfAdd)) {
             unitsForBatchWeightCalc = (percentageOfAdd / 100) * parsedTargetBatchWeight;
             if (!isNaN(unitsForBatchWeightCalc)) {
                 currentSumOfUnitsForBatchWeight += unitsForBatchWeightCalc;
+            } else {
+               allInputsValidForSum = false; // if unitsForBatchWeightCalc becomes NaN
             }
-        } else {
+        } else if (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0) {
             allInputsValidForSum = false; 
         }
       } else {
-        if (!isNaN(excessUnits) && excessUnits > 0) { 
+        if (!isNaN(excessUnits) && excessUnits !== 0) { 
             allInputsValidForSum = false;
         }
       }
@@ -320,7 +316,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     
     if (allInputsValidForSum && !isNaN(currentSumOfUnitsForBatchWeight) && !isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && newPart2Results.some(r => !isNaN(r.unitsForBatchWeight))) {
         setSumOfUnitsForTargetBatchWeight(currentSumOfUnitsForBatchWeight);
-    } else if (newPart2Results.some(r => !isNaN(r.excessUnits) && (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0))) {
+    } else if (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits !== 0 && (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0))) {
         setSumOfUnitsForTargetBatchWeight(allInputsValidForSum ? currentSumOfUnitsForBatchWeight : null);
     } else {
         setSumOfUnitsForTargetBatchWeight(null);
@@ -328,7 +324,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   }, [excessAddResults, watchedTargetBatchWeight]);
 
-  // Effect 3: Combine results from Effect 1 and Effect 2 for unified display
   useEffect(() => {
     const combined: DisplayRow[] = excessAddResults.map((exRes, index) => {
       const p2Res = part2Results[index] || { percentageOfAdd: NaN, unitsForBatchWeight: NaN };
@@ -424,7 +419,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const formulaToLoad = savedFormulas.find(f => f.id === formulaId);
     if (formulaToLoad) {
       reset({
-        targetBatchWeight: '', // Reset target batch weight on load
+        targetBatchWeight: '', 
         totalExcessUnitsToAdd: '', 
         components: formulaToLoad.components.map(c => ({
              name: c.name,
@@ -443,6 +438,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     setSavedFormulas(savedFormulas.filter(f => f.id !== formulaId));
     toast({ title: "Formula Deleted", description: "The selected formula has been removed." });
   };
+
+  const sumOfStandardizedPercentageClass = Math.abs(sumOfStandardizedPercentage - 100) < 0.001 ? 'text-green-600 dark:text-green-400' : 'text-destructive';
 
 
   return (
@@ -566,17 +563,15 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 <div className="flex-1">Component Name</div>
                 <div className="w-1/3 md:w-1/4 text-right">% of Add</div>
                 <div className="w-1/3 md:w-1/4 text-right"># to Add (Batch Wt.)</div>
-                {/* Chevron is part of AccordionTrigger, no explicit header needed for it here, but ensure alignment */}
-                <div className="w-10 md:w-12 text-center"></div> 
+                <div className="w-10 md:w-12 text-center"> </div> 
             </div>
             <Accordion type="single" collapsible className="w-full space-y-1">
               {displayResults.map((comp, index) => (
                 <AccordionItem value={`item-${index}`} key={`display-accordion-${index}`} className="border rounded-md overflow-hidden shadow-sm">
                   <AccordionTrigger className="flex w-full items-center p-3 hover:bg-muted/50 text-sm data-[state=open]:bg-muted/60 [&[data-state=open]>svg]:text-primary">
-                    <div className="flex-1 text-left font-medium">{comp.name || `Component ${index + 1}`}</div>
+                    <div className="flex-1 text-left font-medium truncate pr-2">{comp.name || `Component ${index + 1}`}</div>
                     <div className="w-1/3 md:w-1/4 text-right">{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(3)}%`}</div>
                     <div className="w-1/3 md:w-1/4 text-right font-semibold text-primary">{isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(3)}</div>
-                     {/* AccordionTrigger's default chevron will appear at the end */}
                   </AccordionTrigger>
                   <AccordionContent className="p-4 bg-background border-t">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-sm">
@@ -603,13 +598,18 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             </Accordion>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t mt-4">
-                <ResultDisplay label="Sum of Standardized %" value={sumOfStandardizedPercentage} unit="%" />
+                <ResultDisplay 
+                    label="Sum of Standardized %" 
+                    value={sumOfStandardizedPercentage} 
+                    unit="%" 
+                    valueClassName={sumOfStandardizedPercentageClass}
+                />
                 <ResultDisplay label="Sum of Calculated Excess Units" value={sumOfCalculatedExcessUnits} unit="Units" />
                 <ResultDisplay label="Sum of '# to Add (Batch Wt.)'" value={sumOfUnitsForTargetBatchWeight} unit="Units" variant="highlight"/>
             </div>
-            {/* Warning Messages */}
+
             { Math.abs(parseFloat(watchedTotalExcessUnitsToAdd) - sumOfCalculatedExcessUnits) > 0.001 && !isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) && sumOfCalculatedExcessUnits > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
-                <p className="text-sm text-orange-500">
+                <p className="text-sm text-orange-500 dark:text-orange-400">
                     Note: Sum of calculated excess units ({sumOfCalculatedExcessUnits.toFixed(3)}) may not exactly match total excess units input due to rounding or if total original % is zero.
                 </p>
             )}
@@ -618,7 +618,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                     Enter component percentages from the batch ticket to calculate excess units. Total original percentage is currently zero.
                 </p>
             )}
-            { displayResults.some(r => !isNaN(r.unitsToAdd) && r.unitsToAdd > 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
+            { displayResults.some(r => !isNaN(r.unitsToAdd) && r.unitsToAdd !== 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
                  <p className="text-sm text-amber-600 dark:text-amber-400">
                     Enter a non-zero AV/OH value for components with excess units to calculate '% of Add' and subsequent '# to Add'.
                 </p>
@@ -734,5 +734,3 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
-
-    
