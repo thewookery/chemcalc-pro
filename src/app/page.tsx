@@ -1,21 +1,21 @@
 
 import CalculatorCard from '@/components/CalculatorCard';
 import type { CalculatorMeta } from '@/types';
-import { Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers } from 'lucide-react';
+// Lucide icons are now handled in CalculatorCard.tsx
 
 const calculators: CalculatorMeta[] = [
-  { slug: 'acid-value', name: 'Acid Value Calculator', description: 'Calculate Acid Value from titration data.', icon: Beaker },
-  { slug: 'hydroxyl-value', name: 'Hydroxyl (OH) Value Calculator', description: 'Determine Hydroxyl Value.', icon: Thermometer },
-  { slug: 'saponification-value', name: 'Saponification (Sap) Value', description: 'Calculate Saponification Value.', icon: FlaskConical },
-  { slug: 'iodine-value', name: 'Iodine Value Calculator', description: 'Determine Iodine Value of a substance.', icon: Contrast },
-  { slug: 'anionic-content-adjustment', name: 'Anionic Content Adjustment', description: 'Adjust anionic content to desired percentage.', icon: Pipette },
-  { slug: 'standard-dilution', name: 'Standard Dilution (M1V1=M2V2)', description: 'Calculate volumes for dilutions.', icon: Scaling },
-  { slug: 'percentage', name: 'Percentage Calculator', description: 'Perform various percentage calculations.', icon: Percent },
-  { slug: 'caustic-trial', name: 'Caustic Trial Calculator', description: 'Calculate caustic amounts for trial solutions.', icon: Sigma },
-  { slug: 'batch-caustic-add', name: 'Batch Caustic Add Calculator', description: 'Determine caustic needed for batch adjustments.', icon: Weight },
-  { slug: 'short-batch-adjustment', name: 'Short Batch Adjustment', description: 'Proportionally adjust batch components based on a limiting material.', icon: Scaling },
-  { slug: 'single-component-excess-add', name: 'Single Component Excess Add', description: 'Calculate % of a single material to add based on AV/OH.', icon: FilePlus },
-  { slug: 'multiple-components-excess-add', name: 'Multiple Components Calculator', description: 'Define components, calculate excess adds, and determine full batch weights.', icon: Layers },
+  { slug: 'acid-value', name: 'Acid Value Calculator', description: 'Calculate Acid Value from titration data.', icon: "Beaker" },
+  { slug: 'hydroxyl-value', name: 'Hydroxyl (OH) Value Calculator', description: 'Determine Hydroxyl Value.', icon: "Thermometer" },
+  { slug: 'saponification-value', name: 'Saponification (Sap) Value', description: 'Calculate Saponification Value.', icon: "FlaskConical" },
+  { slug: 'iodine-value', name: 'Iodine Value Calculator', description: 'Determine Iodine Value of a substance.', icon: "Contrast" },
+  { slug: 'anionic-content-adjustment', name: 'Anionic Content Adjustment', description: 'Adjust anionic content to desired percentage.', icon: "Pipette" },
+  { slug: 'standard-dilution', name: 'Standard Dilution (M1V1=M2V2)', description: 'Calculate volumes for dilutions.', icon: "Scaling" },
+  { slug: 'percentage', name: 'Percentage Calculator', description: 'Perform various percentage calculations.', icon: "Percent" },
+  { slug: 'caustic-trial', name: 'Caustic Trial Calculator', description: 'Calculate caustic amounts for trial solutions.', icon: "Sigma" },
+  { slug: 'batch-caustic-add', name: 'Batch Caustic Add Calculator', description: 'Determine caustic needed for batch adjustments.', icon: "Weight" },
+  { slug: 'short-batch-adjustment', name: 'Short Batch Adjustment', description: 'Proportionally adjust batch components based on a limiting material.', icon: "Scaling" }, // Note: Scaling icon is repeated, which is fine.
+  { slug: 'single-component-excess-add', name: 'Single Component Excess Add', description: 'Calculate % of a single material to add based on AV/OH.', icon: "FilePlus" },
+  { slug: 'multiple-components-excess-add', name: 'Multiple Components Calculator', description: 'Define components, calculate excess adds, and determine full batch weights.', icon: "Layers" },
 ];
 
 export default function HomePage() {

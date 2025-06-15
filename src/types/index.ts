@@ -3,7 +3,7 @@ export interface CalculatorMeta {
   slug: string;
   name: string;
   description: string;
-  icon?: React.ElementType; // Lucide icon component
+  icon?: string; // Changed from React.ElementType to string (icon name)
 }
 
 // For use in the Short Batch Adjustment calculator results
