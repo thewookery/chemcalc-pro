@@ -31,34 +31,36 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const IconComponent = calculator.icon ? iconMap[calculator.icon] || iconMap['HelpCircle'] : iconMap['HelpCircle'];
   const [iconFloatStyle, setIconFloatStyle] = useState<React.CSSProperties>({});
   const [canStartRainbow, setCanStartRainbow] = useState(false);
+  const [glitchStyle, setGlitchStyle] = useState<React.CSSProperties>({});
 
   useEffect(() => {
+    // Icon Float Animation Delay
     const minFloatDelaySec = 25;
     const maxFloatDelaySec = 40;
     const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
     const initialFloatDelaySec = Math.random() * floatAnimationDurationVariation + minFloatDelaySec;
-    
     setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
 
+    // Rainbow Animation Logic (after float + 20s, with probability)
     const rainbowProbability = 0.01; 
     const shouldAttemptRainbow = Math.random() < rainbowProbability;
-
-    let rainbowTimerId: NodeJS.Timeout;
-
     if (shouldAttemptRainbow) {
       const delayForRainbowToStartAfterFloatMs = 20 * 1000;
       const totalDelayForRainbowMs = (initialFloatDelaySec * 1000) + delayForRainbowToStartAfterFloatMs;
       
-      rainbowTimerId = setTimeout(() => {
+      const rainbowTimerId = setTimeout(() => {
         setCanStartRainbow(true);
       }, totalDelayForRainbowMs);
+      return () => clearTimeout(rainbowTimerId); // Cleanup for rainbow timer
     }
 
-    return () => {
-      if (shouldAttemptRainbow) {
-        clearTimeout(rainbowTimerId); 
-      }
-    };
+    // Glitch Animation Delay Logic
+    const baseGlitchDelaySec = 10;
+    const randomAdditionalGlitchDelaySec = Math.random() * 10; // 0 to 10 seconds additional
+    const totalGlitchDelaySec = baseGlitchDelaySec + randomAdditionalGlitchDelaySec;
+    setGlitchStyle({ animationDelay: `${totalGlitchDelaySec.toFixed(2)}s` });
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
   return (
@@ -78,7 +80,12 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             )}
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
           </div>
-          <CardTitle className="text-lg font-semibold animate-glitch">{calculator.name}</CardTitle>
+          <CardTitle 
+            className="text-lg font-semibold animate-glitch"
+            style={glitchStyle}
+          >
+            {calculator.name}
+          </CardTitle>
           <CardDescription className="text-sm">{calculator.description}</CardDescription>
         </CardHeader>
       </Card>
@@ -87,4 +94,3 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
-

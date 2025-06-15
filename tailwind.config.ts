@@ -137,10 +137,9 @@ export default {
         slideUp: 'slideUp 0.5s ease-in-out',
         'icon-float': 'iconFloat 100s infinite ease-in-out',
         'rainbow-fade': 'rainbowFade 15s infinite linear',
-        'glitch': 'glitchEffect 0.25s linear 10s 1 normal forwards',
+        'glitch': 'glitchEffect 0.25s linear 1 forwards',
       },
     },
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
-
