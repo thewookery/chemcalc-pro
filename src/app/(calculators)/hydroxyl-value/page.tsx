@@ -5,6 +5,18 @@ import React, { useState, useEffect, useMemo } from 'react';
 import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
 import ResultDisplay from '@/components/calculators/ResultDisplay';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 const HydroxylValueCalculatorPage: React.FC = () => {
   const [blank, setBlank] = useState<string>('');
@@ -20,8 +32,6 @@ const HydroxylValueCalculatorPage: React.FC = () => {
     const av = parseFloat(acidValue); // AV input
 
     if (!isNaN(b) && !isNaN(s) && !isNaN(wt) && !isNaN(av) && wt > 0) {
-      // Corrected formula: OH = (((Blank - Sample) * 0.5 * 56.11) / Weight) + AV
-      // The factor 0.5 often represents the Normality of KOH.
       const ohIntermediate = ((b - s) * 0.5 * 56.11) / wt;
       const ohFinal = ohIntermediate + av;
       setHydroxylValue(ohFinal);
@@ -89,6 +99,75 @@ Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
           tooltipText="Acid Value of the sample, which will be added to the calculated hydroxyl component."
         />
         <ResultDisplay label="Hydroxyl Value" value={hydroxylValue} variant="highlight" />
+      </div>
+      <div className="mt-8 pt-6 border-t">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">How to Use the Hydroxyl (OH) Value Calculator</DialogTitle>
+              <DialogDescription>
+                This calculator determines the Hydroxyl Value (OH Value) of a substance, which is a measure of the content of hydroxyl groups.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 text-sm py-4">
+              <section>
+                <h4 className="font-semibold text-md mb-2">1. Input Blank Titration Volume</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the volume of titrant (e.g., 0.5N alcoholic KOH) used for the blank titration, in milliliters (mL). The blank titration is performed without the sample.
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">25.0 mL</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">2. Input Sample Titration Volume</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the volume of the same titrant used for the titration of your sample, in milliliters (mL).
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">15.0 mL</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">3. Input Sample Weight</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the weight of the sample used for the titration, in grams (g).
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">2.0 g</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">4. Input Acid Value (AV)</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the Acid Value of the sample in mg KOH/g. The Acid Value accounts for free acids present in the sample and is added to the hydroxyl component. If the sample has no free acids, or if this correction is not needed, you can enter 0.
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">0.5 mg KOH/g</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">5. Understanding the Result</h4>
+                <p className="mb-1 text-muted-foreground">
+                  The calculator will display the "Hydroxyl Value". The formula used is:
+                </p>
+                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
+                <p className="text-muted-foreground">
+                  Where:
+                  <ul className="list-disc list-inside pl-4">
+                    <li>(Blank - Sample) is the difference in titrant volume.</li>
+                    <li>0.5 typically represents the normality of the KOH titrant (adjust if different).</li>
+                    <li>56.11 is the molecular weight of KOH.</li>
+                    <li>Weight is the sample weight in grams.</li>
+                    <li>Acid Value is the pre-determined AV of the sample.</li>
+                  </ul>
+                </p>
+              </section>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </CalculatorWrapper>
   );

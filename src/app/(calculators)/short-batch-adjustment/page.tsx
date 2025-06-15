@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, PlusCircle, Save, Upload, AlertTriangle } from 'lucide-react';
+import { Trash2, PlusCircle, Save, Upload, AlertTriangle, HelpCircle } from 'lucide-react';
 import type { SavedBatch, AdjustedComponent, SavedBatchComponent } from '@/types';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +29,17 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent as HelpDialogContent, // Alias to avoid conflict
+  DialogDescription as HelpDialogDescription,
+  DialogFooter as HelpDialogFooter,
+  DialogHeader as HelpDialogHeader,
+  DialogTitle as HelpDialogTitle,
+  DialogTrigger as HelpDialogTrigger,
+} from "@/components/ui/dialog";
+
 
 interface FormData {
   availableLimitingMaterialWt: string;
@@ -230,226 +241,304 @@ const ShortBatchAdjustmentPage: React.FC = () => {
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
-      <form onSubmit={handleSubmit(() => { /* Calculations are real-time via useEffect */ })} className="space-y-8">
-        
-        <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-          <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Determine Adjusted Total Batch Weight</h3>
-          <CommonInput
-            id="availableLimitingMaterialWt"
-            label="Available Amount of Limiting Material"
-            {...register('availableLimitingMaterialWt', { valueAsNumber: true, min: { value: 0, message: "Must be non-negative" } })}
-            placeholder="e.g., 50"
-            tooltipText="The actual amount of the single limiting raw material you have on hand."
-            errorMessage={errors.availableLimitingMaterialWt?.message}
-          />
-          <CommonInput
-            id="ticketLimitingMaterialWt"
-            label="Batch Ticket Amount of Limiting Material"
-            {...register('ticketLimitingMaterialWt', { valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
-            placeholder="e.g., 100"
-            tooltipText="The amount of this limiting material specified on the original, full standard batch ticket."
-            errorMessage={errors.ticketLimitingMaterialWt?.message}
-          />
-          <CommonInput
-            id="originalStandardTotalBatchWt"
-            label="Original Standard Total Batch Weight"
-            {...register('originalStandardTotalBatchWt', { valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
-            placeholder="e.g., 100000"
-            tooltipText="The total weight of the full, original standard batch as per the batch ticket."
-            errorMessage={errors.originalStandardTotalBatchWt?.message}
-          />
-          <ResultDisplay label="Calculated Adjusted Total Batch Weight" value={calculatedAdjustedTotalBatchWeight} variant="highlight" />
-        </section>
-
-        <Separator />
-
-        <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-          <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Calculate Component Weights for Adjusted Batch</h3>
-          <CommonInput
-            id="targetBatchWeightForComponents"
-            label="Target Batch Weight for Components"
-            {...register('targetBatchWeightForComponents', { valueAsNumber: true, min: { value: 0, message: "Must be non-negative" }})}
-            placeholder="e.g., 50000 (auto-filled from Part 1 or enter manually)"
-            tooltipText="The desired total weight for the new batch. Auto-filled from Part 1, or can be entered manually."
-            errorMessage={errors.targetBatchWeightForComponents?.message}
-          />
+      <div className="space-y-8">
+        <form onSubmit={handleSubmit(() => { /* Calculations are real-time via useEffect */ })} className="space-y-8">
           
-          <Label>Components (Standard % on Batch Ticket)</Label>
-          {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-2 items-end p-3 border rounded-md bg-background/50">
-              <div className="flex-grow space-y-1">
-                <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
-                <Input
-                  id={`components.${index}.name`}
-                  placeholder={`Component ${index + 1}`}
-                  {...register(`components.${index}.name`)}
-                  className={cn("h-9", errors.components?.[index]?.name && "border-destructive")}
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Determine Adjusted Total Batch Weight</h3>
+            <CommonInput
+              id="availableLimitingMaterialWt"
+              label="Available Amount of Limiting Material"
+              {...register('availableLimitingMaterialWt', { valueAsNumber: true, min: { value: 0, message: "Must be non-negative" } })}
+              placeholder="e.g., 50"
+              tooltipText="The actual amount of the single limiting raw material you have on hand."
+              errorMessage={errors.availableLimitingMaterialWt?.message}
+            />
+            <CommonInput
+              id="ticketLimitingMaterialWt"
+              label="Batch Ticket Amount of Limiting Material"
+              {...register('ticketLimitingMaterialWt', { valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
+              placeholder="e.g., 100"
+              tooltipText="The amount of this limiting material specified on the original, full standard batch ticket."
+              errorMessage={errors.ticketLimitingMaterialWt?.message}
+            />
+            <CommonInput
+              id="originalStandardTotalBatchWt"
+              label="Original Standard Total Batch Weight"
+              {...register('originalStandardTotalBatchWt', { valueAsNumber: true, min: { value: 0.0001, message: "Must be positive" } })}
+              placeholder="e.g., 100000"
+              tooltipText="The total weight of the full, original standard batch as per the batch ticket."
+              errorMessage={errors.originalStandardTotalBatchWt?.message}
+            />
+            <ResultDisplay label="Calculated Adjusted Total Batch Weight" value={calculatedAdjustedTotalBatchWeight} variant="highlight" />
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Calculate Component Weights for Adjusted Batch</h3>
+            <CommonInput
+              id="targetBatchWeightForComponents"
+              label="Target Batch Weight for Components"
+              {...register('targetBatchWeightForComponents', { valueAsNumber: true, min: { value: 0, message: "Must be non-negative" }})}
+              placeholder="e.g., 50000 (auto-filled from Part 1 or enter manually)"
+              tooltipText="The desired total weight for the new batch. Auto-filled from Part 1, or can be entered manually."
+              errorMessage={errors.targetBatchWeightForComponents?.message}
+            />
+            
+            <Label>Components (Standard % on Batch Ticket)</Label>
+            {fields.map((field, index) => (
+              <div key={field.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-2 items-end p-3 border rounded-md bg-background/50">
+                <div className="flex-grow space-y-1">
+                  <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
+                  <Input
+                    id={`components.${index}.name`}
+                    placeholder={`Component ${index + 1}`}
+                    {...register(`components.${index}.name`)}
+                    className={cn("h-9", errors.components?.[index]?.name && "border-destructive")}
+                  />
+                  {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
+                </div>
+                
+                <CommonInput
+                  id={`components.${index}.standardPercentage`}
+                  label="Standard %"
+                  unit="%"
+                  className="h-9 calculator-input text-input-foreground"
+                  placeholder="e.g., 25"
+                  {...register(`components.${index}.standardPercentage`, { 
+                      valueAsNumber: true, 
+                      min: {value: 0, message: "% >= 0"},
+                  })}
+                  errorMessage={errors.components?.[index]?.standardPercentage?.message}
                 />
-                {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
-              </div>
-              
-              <CommonInput
-                id={`components.${index}.standardPercentage`}
-                label="Standard %"
-                unit="%"
-                className="h-9 calculator-input text-input-foreground"
-                placeholder="e.g., 25"
-                {...register(`components.${index}.standardPercentage`, { 
-                    valueAsNumber: true, 
-                    min: {value: 0, message: "% >= 0"},
-                    // max: {value: 100, message: "% <= 100"} // Max 100 for individual component is typical but not strictly required for math if sum can be >100
-                })}
-                errorMessage={errors.components?.[index]?.standardPercentage?.message}
-              />
 
-              <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
+                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <div className="flex justify-between items-center mt-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', standardPercentage: '' })}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Component
+                </Button>
+                <div className="text-sm font-medium">
+                    Total Standard %: 
+                    <span className={cn("ml-1", totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => !!c.standardPercentage && !isNaN(parseFloat(c.standardPercentage)))) ? "text-orange-500 font-bold" : "text-green-600 font-bold")}>
+                        {isNaN(totalStandardPercentage) ? 'N/A' : totalStandardPercentage.toFixed(2)}%
+                    </span>
+                    {totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => !!c.standardPercentage && !isNaN(parseFloat(c.standardPercentage)))) && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" aria-label="Total standard percentage warning">
+                                    <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Total standard percentage of components does not sum to 100%. The sum of new component weights might not match the target batch weight.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
             </div>
-          ))}
-          <div className="flex justify-between items-center mt-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', standardPercentage: '' })}>
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Component
-              </Button>
-              <div className="text-sm font-medium">
-                  Total Standard %: 
-                  <span className={cn("ml-1", totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => !!c.standardPercentage && !isNaN(parseFloat(c.standardPercentage)))) ? "text-orange-500 font-bold" : "text-green-600 font-bold")}>
-                      {isNaN(totalStandardPercentage) ? 'N/A' : totalStandardPercentage.toFixed(2)}%
-                  </span>
-                  {totalStandardPercentage !== 100 && (totalStandardPercentage > 0 || watchedComponents.some(c => !!c.standardPercentage && !isNaN(parseFloat(c.standardPercentage)))) && (
-                      <TooltipProvider>
-                          <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button type="button" aria-label="Total standard percentage warning">
-                                  <AlertTriangle className="inline-block ml-1 h-4 w-4 text-orange-500" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                  <p>Total standard percentage of components does not sum to 100%. The sum of new component weights might not match the target batch weight.</p>
-                              </TooltipContent>
-                          </Tooltip>
-                      </TooltipProvider>
-                  )}
-              </div>
-          </div>
 
-          {componentBreakdownResults.length > 0 && (!isNaN(parseFloat(watchedTargetBatchWeightForComponents)) && parseFloat(watchedTargetBatchWeightForComponents) >= 0) && (
-            <div className="mt-6">
-              <h4 className="text-md font-medium mb-2">Component Breakdown for Target Batch Weight:</h4>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Component</TableHead>
-                    <TableHead className="text-right">Standard %</TableHead>
-                    <TableHead className="text-right">New Required Weight</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {componentBreakdownResults.map((comp, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{comp.name || `Component ${index + 1}`}</TableCell>
-                      <TableCell className="text-right">{isNaN(comp.standardPercentage) ? "-" : `${comp.standardPercentage.toFixed(2)}%`}</TableCell>
-                      <TableCell className="text-right">{isNaN(comp.newRequiredWeight) ? "Invalid Input" : comp.newRequiredWeight.toFixed(4)}</TableCell>
+            {componentBreakdownResults.length > 0 && (!isNaN(parseFloat(watchedTargetBatchWeightForComponents)) && parseFloat(watchedTargetBatchWeightForComponents) >= 0) && (
+              <div className="mt-6">
+                <h4 className="text-md font-medium mb-2">Component Breakdown for Target Batch Weight:</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Component</TableHead>
+                      <TableHead className="text-right">Standard %</TableHead>
+                      <TableHead className="text-right">New Required Weight</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <ResultDisplay label="Sum of New Component Weights" value={sumOfCalculatedComponentWeights} />
-              {(sumOfCalculatedComponentWeights !== null && !isNaN(parseFloat(watchedTargetBatchWeightForComponents)) && parseFloat(watchedTargetBatchWeightForComponents) >= 0 && Math.abs(parseFloat(watchedTargetBatchWeightForComponents) - sumOfCalculatedComponentWeights) > 0.001) && (
-                <p className="text-sm text-orange-500 mt-2">
-                  Note: Sum of new component weights ({sumOfCalculatedComponentWeights.toFixed(4)}) does not exactly match Target Batch Weight ({parseFloat(watchedTargetBatchWeightForComponents).toFixed(4)}). This can happen if component percentages don't sum to 100% or due to rounding.
-                </p>
-              )}
-            </div>
-          )}
-        </section>
-      </form>
-      
-      <div className="mt-8 pt-6 border-t">
-        <h3 className="text-lg font-medium mb-3">Manage Saved Standard Formulas</h3>
-        <div className="space-y-4 p-4 border rounded-md bg-muted/30">
-          <div className="flex items-end gap-2">
-            <div className="flex-grow">
-              <Label htmlFor="saveBatchName">Formula Name to Save</Label>
-              <Input id="saveBatchName" {...register('saveBatchName')} placeholder="e.g., Product XYZ Standard Formula" className="h-9" />
-            </div>
-            <Button 
-              onClick={handleSaveBatch} 
-              size="sm" 
-              disabled={
-                !watchedOriginalStandardTotalBatchWt || 
-                isNaN(parseFloat(watchedOriginalStandardTotalBatchWt)) ||
-                parseFloat(watchedOriginalStandardTotalBatchWt) <= 0 ||
-                watchedComponents.length === 0 || 
-                watchedComponents.some(c => !c.name || !c.standardPercentage || isNaN(parseFloat(c.standardPercentage)))
-              }
-            >
-              <Save className="mr-2 h-4 w-4" /> Save Current Formula
-            </Button>
-          </div>
-
-          {savedBatches.length > 0 && (
-            <div className="space-y-2">
-              <Label htmlFor="loadBatchSelect">Load Saved Formula</Label>
-               <div className="flex items-center gap-2">
-                <Select value={selectedBatchToLoad} onValueChange={(id) => {setSelectedBatchToLoad(id); if(id) handleLoadBatch(id);}}>
-                  <SelectTrigger id="loadBatchSelect">
-                    <SelectValue placeholder="Select a formula to load..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {savedBatches.map(batch => (
-                      <SelectItem key={batch.id} value={batch.id}>
-                        {batch.name} (Saved: {new Date(batch.createdAt).toLocaleDateString()})
-                      </SelectItem>
+                  </TableHeader>
+                  <TableBody>
+                    {componentBreakdownResults.map((comp, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{comp.name || `Component ${index + 1}`}</TableCell>
+                        <TableCell className="text-right">{isNaN(comp.standardPercentage) ? "-" : `${comp.standardPercentage.toFixed(2)}%`}</TableCell>
+                        <TableCell className="text-right">{isNaN(comp.newRequiredWeight) ? "Invalid Input" : comp.newRequiredWeight.toFixed(4)}</TableCell>
+                      </TableRow>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </TableBody>
+                </Table>
+                <ResultDisplay label="Sum of New Component Weights" value={sumOfCalculatedComponentWeights} />
+                {(sumOfCalculatedComponentWeights !== null && !isNaN(parseFloat(watchedTargetBatchWeightForComponents)) && parseFloat(watchedTargetBatchWeightForComponents) >= 0 && Math.abs(parseFloat(watchedTargetBatchWeightForComponents) - sumOfCalculatedComponentWeights) > 0.001) && (
+                  <p className="text-sm text-orange-500 mt-2">
+                    Note: Sum of new component weights ({sumOfCalculatedComponentWeights.toFixed(4)}) does not exactly match Target Batch Weight ({parseFloat(watchedTargetBatchWeightForComponents).toFixed(4)}). This can happen if component percentages don't sum to 100% or due to rounding.
+                  </p>
+                )}
               </div>
-              
-              <h4 className="text-sm font-medium mt-4">Saved Formulas:</h4>
-              <ul className="space-y-1 max-h-40 overflow-y-auto">
-                {savedBatches.map(batch => (
-                  <li key={batch.id} className="flex justify-between items-center p-2 border rounded text-sm hover:bg-muted/50">
-                    <span>{batch.name}</span>
-                    <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleLoadBatch(batch.id)} aria-label={`Load ${batch.name}`}>
-                            <Upload className="h-3 w-3"/>
-                        </Button>
-                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label={`Delete ${batch.name}`}>
-                                <Trash2 className="h-3 w-3"/>
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the formula "{batch.name}".
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteBatch(batch.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+            )}
+          </section>
+        </form>
+      
+        <div className="mt-8 pt-6 border-t">
+          <HelpDialog>
+            <HelpDialogTrigger asChild>
+              <Button variant="outline" size="sm" className="w-full md:w-auto mb-6">
+                <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+              </Button>
+            </HelpDialogTrigger>
+            <HelpDialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+              <HelpDialogHeader>
+                <HelpDialogTitle className="text-xl">How to Use the Short Batch Adjustment Calculator</HelpDialogTitle>
+                <HelpDialogDescription>
+                  This calculator helps you adjust batch component quantities when you have a limited amount of one specific material, or if you want to make a smaller test batch.
+                </HelpDialogDescription>
+              </HelpDialogHeader>
+              <div className="space-y-4 text-sm py-4">
+                <section>
+                  <h4 className="font-semibold text-md mb-2">Part 1: Determine Adjusted Total Batch Weight</h4>
+                  <p className="mb-1 text-muted-foreground">This section calculates a new total batch weight based on how much of a limiting material you have.</p>
+                  <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                    <li>
+                      <strong>Available Amount of Limiting Material:</strong> Enter the actual quantity of the raw material that you have on hand and is limiting your batch size.
+                      <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">50 lbs</span></div>
+                    </li>
+                    <li>
+                      <strong>Batch Ticket Amount of Limiting Material:</strong> Enter the amount of this same limiting material that is specified on your standard, full-size batch ticket.
+                      <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">100 lbs</span></div>
+                    </li>
+                    <li>
+                      <strong>Original Standard Total Batch Weight:</strong> Enter the total weight of a full, standard batch as per your original batch ticket.
+                      <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">100000 lbs</span></div>
+                    </li>
+                  </ul>
+                  <p className="mt-2 text-muted-foreground">
+                    The "Calculated Adjusted Total Batch Weight" will be shown. This value is automatically used to populate the "Target Batch Weight for Components" in Part 2, but you can override it.
+                  </p>
+                </section>
+
+                <section>
+                  <h4 className="font-semibold text-md mb-2">Part 2: Calculate Component Weights for Adjusted Batch</h4>
+                  <p className="mb-1 text-muted-foreground">This section calculates the new required weight for each component in your formula based on the adjusted (or manually entered) target batch weight.</p>
+                  <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                    <li>
+                      <strong>Target Batch Weight for Components:</strong> This is the total weight for the new, adjusted batch you intend to make. It's auto-filled from Part 1 or can be entered manually.
+                      <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">50000 lbs</span> (if auto-filled from above example)</div>
+                    </li>
+                    <li>
+                      <strong>Components Section:</strong> For each raw material in your formula:
+                      <ul className="list-disc list-inside pl-4 mt-1">
+                          <li><strong>Name:</strong> Enter the name of the component. (e.g., Material A)</li>
+                          <li><strong>Standard %:</strong> Enter the percentage of this component as specified on the original, full-size batch ticket. (e.g., 25 %)</li>
+                      </ul>
+                       <p className="mt-1">Use the <span className="inline-flex items-center"><PlusCircle className="h-3 w-3 mr-1"/> Add Component</span> button or <Trash2 className="inline-block h-3 w-3"/> icon to manage components.</p>
+                       <p className="mt-1">The "Total Standard %" displayed should ideally be 100%. If not, the sum of new component weights may not match the target batch weight exactly.</p>
+                    </li>
+                  </ul>
+                  <p className="mt-2 text-muted-foreground">
+                    The "Component Breakdown" table will show the "New Required Weight" for each component. The "Sum of New Component Weights" should match your "Target Batch Weight for Components" if the total standard percentages sum to 100%.
+                  </p>
+                </section>
+
+                <section>
+                  <h4 className="font-semibold text-md mb-2">Saving and Loading Formulas</h4>
+                  <p className="mb-1 text-muted-foreground">
+                    You can save your current formula (component names, their standard percentages, and the "Original Standard Total Batch Weight") for quick reuse.
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                    <li>To save, enter a "Formula Name to Save" and click "Save Current Formula".</li>
+                    <li>To load, select a formula from the "Load Saved Formula" dropdown. This will populate Part 1's "Original Standard Total Batch Weight" and all components in Part 2. You will then need to fill in the limiting material details in Part 1 to calculate the new batch size.</li>
+                  </ul>
+                </section>
+              </div>
+              <HelpDialogFooter>
+                <DialogClose asChild>
+                  <Button type="button">Close</Button>
+                </DialogClose>
+              </HelpDialogFooter>
+            </HelpDialogContent>
+          </HelpDialog>
+        </div>
+
+        <div className="mt-8 pt-6 border-t">
+          <h3 className="text-lg font-medium mb-3">Manage Saved Standard Formulas</h3>
+          <div className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <div className="flex items-end gap-2">
+              <div className="flex-grow">
+                <Label htmlFor="saveBatchName">Formula Name to Save</Label>
+                <Input id="saveBatchName" {...register('saveBatchName')} placeholder="e.g., Product XYZ Standard Formula" className="h-9" />
+              </div>
+              <Button 
+                onClick={handleSaveBatch} 
+                size="sm" 
+                disabled={
+                  !watchedOriginalStandardTotalBatchWt || 
+                  isNaN(parseFloat(watchedOriginalStandardTotalBatchWt)) ||
+                  parseFloat(watchedOriginalStandardTotalBatchWt) <= 0 ||
+                  watchedComponents.length === 0 || 
+                  watchedComponents.some(c => !c.name || !c.standardPercentage || isNaN(parseFloat(c.standardPercentage)))
+                }
+              >
+                <Save className="mr-2 h-4 w-4" /> Save Current Formula
+              </Button>
             </div>
-          )}
-           {savedBatches.length === 0 && <p className="text-sm text-muted-foreground">No standard formulas saved yet.</p>}
+
+            {savedBatches.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="loadBatchSelect">Load Saved Formula</Label>
+                 <div className="flex items-center gap-2">
+                  <Select value={selectedBatchToLoad} onValueChange={(id) => {setSelectedBatchToLoad(id); if(id) handleLoadBatch(id);}}>
+                    <SelectTrigger id="loadBatchSelect">
+                      <SelectValue placeholder="Select a formula to load..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {savedBatches.map(batch => (
+                        <SelectItem key={batch.id} value={batch.id}>
+                          {batch.name} (Saved: {new Date(batch.createdAt).toLocaleDateString()})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <h4 className="text-sm font-medium mt-4">Saved Formulas:</h4>
+                <ul className="space-y-1 max-h-40 overflow-y-auto">
+                  {savedBatches.map(batch => (
+                    <li key={batch.id} className="flex justify-between items-center p-2 border rounded text-sm hover:bg-muted/50">
+                      <span>{batch.name}</span>
+                      <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleLoadBatch(batch.id)} aria-label={`Load ${batch.name}`}>
+                              <Upload className="h-3 w-3"/>
+                          </Button>
+                           <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" aria-label={`Delete ${batch.name}`}>
+                                  <Trash2 className="h-3 w-3"/>
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the formula "{batch.name}".
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteBatch(batch.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+             {savedBatches.length === 0 && <p className="text-sm text-muted-foreground">No standard formulas saved yet.</p>}
+          </div>
         </div>
       </div>
-
     </CalculatorWrapper>
   );
 };
 
 export default ShortBatchAdjustmentPage;
-
-    

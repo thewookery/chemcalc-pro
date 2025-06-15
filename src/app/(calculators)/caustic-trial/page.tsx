@@ -1,9 +1,22 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 interface CausticTrialResult {
   percentage: number;
@@ -83,6 +96,57 @@ const CausticTrialCalculatorPage: React.FC = () => {
             </Table>
           </div>
         )}
+      </div>
+       <div className="mt-8 pt-6 border-t">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">How to Use the Caustic Trial Calculator</DialogTitle>
+              <DialogDescription>
+                This calculator helps determine the amount of caustic (e.g., 50% NaOH solution) needed for small lab trials to achieve various target caustic percentages.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 text-sm py-4">
+              <section>
+                <h4 className="font-semibold text-md mb-2">1. Input Trial Weight</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the total weight of your lab trial sample in grams (g). This is the total weight of the solution you are preparing for the test.
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">500 g</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">2. Understanding the Results Table</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Once you input the trial weight, the calculator automatically generates a table. This table shows:
+                </p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Target Caustic %:</strong> A range of predefined target caustic percentages (from 0.08% to 0.30%).</li>
+                  <li><strong>Caustic Amount (g):</strong> The calculated amount of caustic (in grams) needed to reach each corresponding target percentage for your specified trial weight.</li>
+                </ul>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">Formula Used</h4>
+                <p className="mb-1 text-muted-foreground">
+                  For each target percentage, the calculation is:
+                </p>
+                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
+                <p className="text-muted-foreground">
+                  This formula assumes the "Caustic Amount (g)" refers to the weight of the caustic solution itself (e.g., 50% NaOH solution), not pure NaOH.
+                </p>
+              </section>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </CalculatorWrapper>
   );

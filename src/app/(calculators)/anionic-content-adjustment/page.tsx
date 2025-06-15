@@ -1,9 +1,22 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
 import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
 import ResultDisplay from '@/components/calculators/ResultDisplay';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 const AnionicContentAdjustmentPage: React.FC = () => {
   const [currentAnionic, setCurrentAnionic] = useState<string>('');
@@ -17,7 +30,6 @@ const AnionicContentAdjustmentPage: React.FC = () => {
     const batchWt = parseFloat(batchWeight);
 
     if (!isNaN(current) && !isNaN(desired) && !isNaN(batchWt) && desired > 0 && batchWt > 0 && current >= desired) {
-      // Water to add = Initial Batch Weight * (Initial % / Final %) - Initial Batch Weight
       const finalBatchWeight = batchWt * (current / desired);
       const water = finalBatchWeight - batchWt;
       setWaterToAdd(water);
@@ -78,6 +90,62 @@ Water to Add: ${waterToAdd.toFixed(3)} lbs`;
         {parseFloat(currentAnionic) < parseFloat(desiredAnionic) && !isNaN(parseFloat(currentAnionic)) && !isNaN(parseFloat(desiredAnionic)) && (
           <p className="text-sm text-orange-600 dark:text-orange-400">Note: Desired % cannot be higher than current % for dilution with water.</p>
         )}
+      </div>
+      <div className="mt-8 pt-6 border-t">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">How to Use the Anionic Content Adjustment Calculator</DialogTitle>
+              <DialogDescription>
+                This calculator helps determine the amount of water (or other diluent) to add to a batch to reduce its anionic surfactant percentage to a desired level.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 text-sm py-4">
+              <section>
+                <h4 className="font-semibold text-md mb-2">1. Input Current Anionic %</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the current measured anionic percentage of your batch.
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">30.0 %</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">2. Input Desired Anionic %</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the target anionic percentage you want to achieve after dilution. This value must be less than or equal to the "Current Anionic %".
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">28.0 %</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">3. Input Batch Weight</h4>
+                <p className="mb-1 text-muted-foreground">
+                  Enter the current total weight of your batch in pounds (lbs).
+                </p>
+                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 lbs</span></div>
+              </section>
+              <section>
+                <h4 className="font-semibold text-md mb-2">4. Understanding the Result</h4>
+                <p className="mb-1 text-muted-foreground">
+                  The calculator will display the "Water to Add" in pounds (lbs). This is the amount of diluent needed to reach your target anionic percentage.
+                </p>
+                <p className="mb-1 text-muted-foreground">The formula used is:</p>
+                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
+                <p className="text-muted-foreground">
+                  This calculation assumes the diluent (e.g., water) has 0% anionic content.
+                </p>
+              </section>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </CalculatorWrapper>
   );

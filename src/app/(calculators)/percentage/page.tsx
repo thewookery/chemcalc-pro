@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -5,6 +6,18 @@ import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
 import ResultDisplay from '@/components/calculators/ResultDisplay';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { HelpCircle } from "lucide-react";
 
 type PercentageMode = "percentOfValue" | "whatPercent";
 
@@ -105,6 +118,69 @@ ${a2} is ${percent2.toFixed(3)}% of ${b2}`;
           <ResultDisplay label="Percentage" value={percent2} unit="%" variant="highlight" />
         </TabsContent>
       </Tabs>
+      <div className="mt-8 pt-6 border-t">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">How to Use the Percentage Calculator</DialogTitle>
+              <DialogDescription>
+                This calculator offers two modes for common percentage calculations.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 text-sm py-4">
+              <section>
+                <h4 className="font-semibold text-md mb-2">Mode 1: Find % of a Value</h4>
+                <p className="mb-1 text-muted-foreground">
+                  This mode helps you find what a certain percentage (B) of a given total value (C) is. The result is Value A.
+                </p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li>
+                    <strong>Percentage (B):</strong> Enter the percentage you want to find.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">25 %</span></div>
+                  </li>
+                  <li>
+                    <strong>Total Value (C):</strong> Enter the total amount from which the percentage will be calculated.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">200</span></div>
+                  </li>
+                </ul>
+                <p className="mt-1 text-muted-foreground">
+                  The calculator will show the "Result (A)". The formula is: <code className="font-mono bg-muted px-1 rounded">{formulaMode1}</code>
+                </p>
+              </section>
+              <hr className="my-4"/>
+              <section>
+                <h4 className="font-semibold text-md mb-2">Mode 2: What % is A of B</h4>
+                <p className="mb-1 text-muted-foreground">
+                  This mode helps you find what percentage a certain value (A) is of a total value (B).
+                </p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li>
+                    <strong>Value (A):</strong> Enter the partial value.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">50</span></div>
+                  </li>
+                  <li>
+                    <strong>Total Value (B):</strong> Enter the total amount that Value A is part of.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">200</span></div>
+                  </li>
+                </ul>
+                <p className="mt-1 text-muted-foreground">
+                  The calculator will show the "Percentage". The formula is: <code className="font-mono bg-muted px-1 rounded">{formulaMode2}</code>
+                </p>
+              </section>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button">Close</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </CalculatorWrapper>
   );
 };
