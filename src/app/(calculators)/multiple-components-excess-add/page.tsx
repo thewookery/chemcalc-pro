@@ -54,6 +54,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogClose,
 } from "@/components/ui/dialog";
 
 const SAVED_BATCHES_KEY = 'chemcalc_savedFormulas_excessAndFull_v1';
@@ -713,7 +714,9 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
               </section>
             </div>
             <DialogFooter>
-              <Button onClick={() => (document.querySelector('[cmdk-dialog-content] [aria-label="Close"]') as HTMLElement)?.click()}>Close</Button>
+              <DialogClose asChild>
+                <Button type="button">Close</Button>
+              </DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>
