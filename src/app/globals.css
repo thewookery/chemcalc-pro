@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,7 +30,7 @@ body {
     --accent: 232 100% 76%; /* Vibrant purple-blue #8596ff */
     --accent-foreground: 210 20% 98%; /* White/very light gray for text on accent */
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 90% 65%; /* Brighter Red e.g. #f75454 */
     --destructive-foreground: 0 0% 98%;
 
     --border: 214.3 31.8% 91.4%;
@@ -78,7 +79,7 @@ body {
     --accent: 232 90% 70%; /* Adjusted purple-blue for dark mode */
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 45%; /* Brighter Red for dark mode e.g. #e55c5c */
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
