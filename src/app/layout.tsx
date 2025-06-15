@@ -3,6 +3,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/toaster';
 import AppHeader from '@/components/layout/AppHeader';
+import WalkingDuck from '@/components/extras/WalkingDuck';
 
 export const metadata: Metadata = {
   title: 'Z & S QC lab tools',
@@ -33,6 +34,7 @@ export default function RootLayout({
             {children}
           </main>
           <Toaster />
+          <WalkingDuck />
         </ThemeProvider>
       </body>
     </html>
