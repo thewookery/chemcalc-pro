@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle } from 'lucide-react';
-import type { BatchTicketComponentInput, CalculatedExcessComponent, SavedBatch } from '@/types';
+import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle, HelpCircle } from 'lucide-react';
+import type { BatchTicketComponentInput, CalculatedExcessComponent, Part2CalculatedValueComponent, SavedBatch } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { materialsList, type Material } from '@/lib/materials';
@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const SAVED_BATCHES_KEY = 'chemcalc_savedFormulas_excessAndFull_v1';
 
@@ -54,12 +55,13 @@ interface FormData {
 interface MaterialNameComboboxProps {
   value: string;
   onChange: (value: string) => void;
+  onMaterialSelect?: (material: Material | null) => void;
   materials: Material[];
   placeholder?: string;
   id?: string;
 }
 
-const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onChange, materials, placeholder, id }) => {
+const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onChange, onMaterialSelect, materials, placeholder, id }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState(value || "");
 
@@ -71,14 +73,22 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
   }, [value]);
 
   const handleSelect = (materialName: string) => {
+    const selectedMaterial = materials.find(m => m.name === materialName) || null;
     onChange(materialName);
+    if (onMaterialSelect) {
+      onMaterialSelect(selectedMaterial);
+    }
     setSearchTerm(materialName);
     setIsOpen(false);
   };
 
   const handleSearchChange = (newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
-    onChange(newSearchTerm);
+    onChange(newSearchTerm); // Update form with typed value
+    if (onMaterialSelect) {
+      const selectedMaterial = materials.find(m => m.name.toLowerCase() === newSearchTerm.toLowerCase()) || null;
+      onMaterialSelect(selectedMaterial); // Pass material if exact match, or null
+    }
   };
 
   const triggerText = value || placeholder || "Select or type name...";
@@ -151,9 +161,9 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     defaultValues: {
       totalExcessUnitsToAdd: '',
       components: [
-        { name: '', percentageFromTicket: '' },
-        { name: '', percentageFromTicket: '' },
-        { name: '', percentageFromTicket: '' },
+        { name: '', percentageFromTicket: '', avOrOhValue: '' },
+        { name: '', percentageFromTicket: '', avOrOhValue: '' },
+        { name: '', percentageFromTicket: '', avOrOhValue: '' },
       ],
       saveFormulaName: '',
       referenceOriginalTotalBatchWeightForSave: '',
@@ -174,7 +184,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   const [sumOfStandardizedPercentage, setSumOfStandardizedPercentage] = useState<number>(0);
   const [sumOfCalculatedExcessUnits, setSumOfCalculatedExcessUnits] = useState<number>(0);
 
+  const [part2Results, setPart2Results] = useState<Part2CalculatedValueComponent[]>([]);
+  const [sumOfPart2CalculatedValues, setSumOfPart2CalculatedValues] = useState<number | null>(null);
 
+
+  // Part 1: Excess Add Calculation
   useEffect(() => {
     const parsedTotalExcessUnits = parseFloat(watchedTotalExcessUnitsToAdd);
     let currentTotalOriginalPerc = 0;
@@ -194,6 +208,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     if (currentTotalOriginalPerc > 0) {
       watchedComponents.forEach(comp => {
         const originalPerc = parseFloat(comp.percentageFromTicket);
+        const avOhVal = parseFloat(comp.avOrOhValue);
+
         if (!isNaN(originalPerc) && originalPerc > 0) {
           const standardizedPerc = (originalPerc / currentTotalOriginalPerc) * 100;
           currentSumOfStandardizedPerc += standardizedPerc;
@@ -210,6 +226,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             percentageFromTicket: originalPerc,
             standardizedPercentage: standardizedPerc,
             unitsToAdd: unitsForThisComponent,
+            avOrOhValue: isNaN(avOhVal) ? NaN : avOhVal,
           });
         } else {
              tempResults.push({
@@ -217,16 +234,19 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 percentageFromTicket: NaN,
                 standardizedPercentage: NaN,
                 unitsToAdd: NaN,
+                avOrOhValue: isNaN(avOhVal) ? NaN : avOhVal,
             });
         }
       });
     } else {
         watchedComponents.forEach(comp => {
+            const avOhVal = parseFloat(comp.avOrOhValue);
             tempResults.push({
                 name: comp.name || '',
                 percentageFromTicket: NaN,
                 standardizedPercentage: NaN,
                 unitsToAdd: NaN,
+                avOrOhValue: isNaN(avOhVal) ? NaN : avOhVal,
             });
         });
     }
@@ -237,14 +257,49 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
 
+  // Part 2: Component Value Calculation (Excess Units * AV/OH)
+  useEffect(() => {
+    const newPart2Results: Part2CalculatedValueComponent[] = [];
+    let currentSumOfPart2Values = 0;
+    let allInputsValidForSum = true;
 
-  const formula = "Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.";
+    excessAddResults.forEach(compFromPart1 => {
+      const excessUnits = compFromPart1.unitsToAdd;
+      const avOrOh = compFromPart1.avOrOhValue; // Already parsed in part 1's useEffect
+
+      if (!isNaN(excessUnits) && excessUnits > 0 && !isNaN(avOrOh) && avOrOh !== 0) {
+        const calculatedValue = excessUnits * avOrOh;
+        newPart2Results.push({
+          name: compFromPart1.name,
+          excessUnits: excessUnits,
+          avOrOhValue: avOrOh,
+          calculatedValue: calculatedValue,
+        });
+        currentSumOfPart2Values += calculatedValue;
+      } else {
+        newPart2Results.push({
+          name: compFromPart1.name,
+          excessUnits: isNaN(excessUnits) ? NaN : excessUnits,
+          avOrOhValue: isNaN(avOrOh) ? NaN : avOrOh,
+          calculatedValue: NaN,
+        });
+        if (!isNaN(excessUnits) && excessUnits > 0) { // Only consider it invalid for sum if excess units were present but AV/OH was missing/zero
+            allInputsValidForSum = false;
+        }
+      }
+    });
+    setPart2Results(newPart2Results);
+    setSumOfPart2CalculatedValues(allInputsValidForSum && currentSumOfPart2Values > 0 ? currentSumOfPart2Values : (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0) ? (allInputsValidForSum ? currentSumOfPart2Values : null) : null) );
+  }, [excessAddResults]);
+
+
+  const formula = "Part 1 (Excess Add): Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\nPart 2 (Component Value): Calc. Value = Excess Units (from Part 1) * AV/OH of Material.";
 
   const resultsToCopy = useMemo(() => {
-    let text = `Multiple Components Excess Add Calculation:\n\n`;
+    let text = `Multiple Components Calculation:\n\n== Part 1: Excess Add Calculation ==\n`;
     text += `Components (% from Batch Ticket):\n`;
     watchedComponents.forEach((comp, index) => {
-      text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}%\n`;
+      text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}% (AV/OH: ${comp.avOrOhValue || 'N/A'})\n`;
     });
     text += `Total Original % from Batch Ticket: ${totalOriginalPercentage.toFixed(2)}%\n`;
     text += `Total Excess Units to Add to Batch: ${watchedTotalExcessUnitsToAdd}\n\n`;
@@ -256,8 +311,17 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     });
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
     text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
+
+    text += `\n\n== Part 2: Component Value Calculation ==\n`;
+    text += `Component Name | Excess Units | AV/OH | Calculated Value\n`;
+    text += `-----------------------------------------------------------\n`;
+    part2Results.forEach(res => {
+      text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.excessUnits) ? 'N/A'.padEnd(12) : res.excessUnits.toFixed(3).padEnd(12)} | ${isNaN(res.avOrOhValue) ? 'N/A'.padEnd(5) : res.avOrOhValue.toString().padEnd(5)} | ${isNaN(res.calculatedValue) ? 'N/A' : res.calculatedValue.toFixed(3)}\n`;
+    });
+    text += `\nSum of Part 2 Calculated Values: ${sumOfPart2CalculatedValues !== null && !isNaN(sumOfPart2CalculatedValues) ? sumOfPart2CalculatedValues.toFixed(3) : 'N/A'}\n`;
+
     return text;
-  }, [watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, excessAddResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits]);
+  }, [watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, excessAddResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, part2Results, sumOfPart2CalculatedValues]);
 
   const handleSaveFormula = () => {
     const formulaName = watch('saveFormulaName');
@@ -278,7 +342,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     const componentsToSave = watchedComponents
         .filter(c => c.name && c.percentageFromTicket && !isNaN(parseFloat(c.percentageFromTicket)))
-        .map(c => ({ name: c.name, standardPercentage: parseFloat(c.percentageFromTicket) }));
+        .map(c => ({
+            name: c.name,
+            standardPercentage: parseFloat(c.percentageFromTicket),
+            avOrOhValue: c.avOrOhValue && !isNaN(parseFloat(c.avOrOhValue)) ? parseFloat(c.avOrOhValue) : undefined
+        }));
 
     if (componentsToSave.length === 0) {
       toast({ title: "Error", description: "At least one component with a valid name and original batch ticket percentage is required to save.", variant: "destructive" });
@@ -295,7 +363,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     setSavedFormulas([...savedFormulas, newSavedFormula]);
     setValue('saveFormulaName', '');
-    setValue('referenceOriginalTotalBatchWeightForSave', '');
+    // setValue('referenceOriginalTotalBatchWeightForSave', ''); // Keep this as user might be saving variations
     toast({ title: "Success", description: `Formula "${newSavedFormula.name}" saved.` });
   };
 
@@ -303,8 +371,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const formulaToLoad = savedFormulas.find(f => f.id === formulaId);
     if (formulaToLoad) {
       reset({
-        totalExcessUnitsToAdd: '',
-        components: formulaToLoad.components.map(c => ({ name: c.name, percentageFromTicket: String(c.standardPercentage) })),
+        totalExcessUnitsToAdd: '', // Clear excess units on load
+        components: formulaToLoad.components.map(c => ({
+             name: c.name,
+             percentageFromTicket: String(c.standardPercentage),
+             avOrOhValue: c.avOrOhValue !== undefined ? String(c.avOrOhValue) : ''
+        })),
         saveFormulaName: '',
         referenceOriginalTotalBatchWeightForSave: String(formulaToLoad.originalStandardTotalBatchWeight),
       });
@@ -321,20 +393,21 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   return (
     <CalculatorWrapper
-      title="Multiple Components Excess Add Calculator"
-      description="Standardize component percentages from a batch ticket and calculate how to distribute a total excess quantity among them."
+      title="Multiple Components Calculator"
+      description="Part 1: Standardize component percentages for excess add. Part 2: Calculate component values based on excess units and AV/OH."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
       <form onSubmit={handleSubmit(() => { /* Calculations are real-time */ })} className="space-y-8">
+        {/* Part 1: Excess Add Section */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
-            <h3 className="text-xl font-semibold mb-3 text-primary">Excess Add Calculation</h3>
+            <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Excess Add Calculation</h3>
             <div>
-                <Label className="text-lg font-semibold">Component Percentages from Batch Ticket</Label>
-                <p className="text-sm text-muted-foreground mb-3">Enter each component and its percentage as listed on the original batch ticket.</p>
+                <Label className="text-lg font-semibold">Component Details</Label>
+                <p className="text-sm text-muted-foreground mb-3">Enter each component, its original batch ticket %, and its AV/OH value (for Part 2).</p>
                 {fields.map((field, index) => (
-                    <div key={field.id} className="grid grid-cols-[1fr_auto] md:grid-cols-[2fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-background/50 shadow-sm">
-                    <div className="space-y-1 col-span-1 md:col-span-1">
+                    <div key={field.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-2 items-end p-3 mb-2 border rounded-md bg-background/50 shadow-sm">
+                    <div className="space-y-1">
                         <Label htmlFor={`components.${index}.name`} className="text-xs">Name</Label>
                         <Controller
                         control={control}
@@ -347,6 +420,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                             onChange={onChange}
                             materials={materialsList}
                             placeholder={`Component ${index + 1}`}
+                            onMaterialSelect={(material) => {
+                                if (material) {
+                                    setValue(`components.${index}.avOrOhValue`, material.value.toString(), { shouldValidate: true });
+                                }
+                            }}
                             />
                         )}
                         />
@@ -366,13 +444,26 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                         errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
                     />
 
-                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end col-start-2 md:col-start-auto" aria-label="Remove component">
+                    <CommonInput
+                        id={`components.${index}.avOrOhValue`}
+                        label="AV/OH Value"
+                        className="h-9 calculator-input text-input-foreground"
+                        placeholder="e.g., 389"
+                        tooltipText="Acid Value or Hydroxyl Value of this material. Used in Part 2. Pre-fills if material is selected."
+                        {...register(`components.${index}.avOrOhValue`, {
+                            setValueAs: (v) => v === "" ? "" : (parseFloat(v) !== 0 ? parseFloat(v).toString() : "0"), // Allow 0 but !==0 for calc
+                            validate: value => value === "" || (!isNaN(parseFloat(value))) || "Must be a number or empty"
+                        })}
+                        errorMessage={errors.components?.[index]?.avOrOhValue?.message}
+                    />
+
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
                         <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                     </div>
                 ))}
                 <div className="flex justify-between items-center mt-2">
-                    <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', percentageFromTicket: '' })}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => append({ name: '', percentageFromTicket: '', avOrOhValue: '' })}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Component
                     </Button>
                     <div className="text-right">
@@ -393,27 +484,27 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
             })}
             placeholder="e.g., 20"
-            tooltipText="The total combined amount of all excess components you intend to add."
+            tooltipText="The total combined amount of all excess components you intend to add for Part 1."
             errorMessage={errors.totalExcessUnitsToAdd?.message}
             />
 
 
             {excessAddResults.length > 0 && (
             <div className="mt-6 space-y-4">
-                <h3 className="text-lg font-semibold">Calculated Excess Breakdown</h3>
+                <h3 className="text-lg font-semibold">Part 1 Results: Calculated Excess Breakdown</h3>
                 <Table>
                 <TableHeader className="hidden md:table-header-group">
                     <TableRow>
                     <TableHead>Component Name</TableHead>
                     <TableHead className="text-right">Original %</TableHead>
-                    <TableHead className="text-right">Standardized %</TableHead>
+                    <TableHead className="text-right">Std. %</TableHead>
                     <TableHead className="text-right">Excess Units to Add</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {excessAddResults.map((comp, index) => (
                     <TableRow
-                        key={index}
+                        key={`part1-${index}`}
                         className="block md:table-row mb-4 md:mb-0 p-3 md:p-0 border rounded-lg md:border-b md:border-0 md:rounded-none shadow-md md:shadow-none last:mb-0 md:last:mb-0"
                     >
                         <TableCell className="block md:table-cell p-1 md:p-4 font-medium">
@@ -463,8 +554,82 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             </div>
             )}
         </section>
+
+        <Separator />
+
+        {/* Part 2: Component Value Calculation (Excess Units * AV/OH) */}
+        <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+          <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Component Value Calculation</h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            This section uses the "Excess Units to Add" calculated in Part 1 and multiplies them by the AV/OH value you entered for each component.
+          </p>
+          {part2Results.length > 0 && (
+            <div className="mt-6 space-y-4">
+              <h3 className="text-lg font-semibold">Part 2 Results: Calculated Component Values</h3>
+              <Table>
+                <TableHeader className="hidden md:table-header-group">
+                  <TableRow>
+                    <TableHead>Component Name</TableHead>
+                    <TableHead className="text-right">Excess Units (Part 1)</TableHead>
+                    <TableHead className="text-right">AV/OH of Material</TableHead>
+                    <TableHead className="text-right">Calculated Value</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {part2Results.map((comp, index) => (
+                    <TableRow
+                      key={`part2-${index}`}
+                      className="block md:table-row mb-4 md:mb-0 p-3 md:p-0 border rounded-lg md:border-b md:border-0 md:rounded-none shadow-md md:shadow-none last:mb-0 md:last:mb-0"
+                    >
+                      <TableCell className="block md:table-cell p-1 md:p-4 font-medium">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Name:</span>
+                            <span>{comp.name || `Component ${index + 1}`}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Excess Units:</span>
+                            <span>{isNaN(comp.excessUnits) ? '-' : comp.excessUnits.toFixed(3)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
+                         <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">AV/OH:</span>
+                            <span>{isNaN(comp.avOrOhValue) ? '-' : comp.avOrOhValue.toString()}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="block md:table-cell p-1 md:p-4 md:text-right">
+                        <div className="flex justify-between items-center md:block">
+                            <span className="text-sm font-semibold text-muted-foreground md:hidden">Calc. Value:</span>
+                            <span className="font-semibold md:font-normal text-primary md:text-foreground">
+                                {isNaN(comp.calculatedValue) ? '-' : comp.calculatedValue.toFixed(3)}
+                            </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                <ResultDisplay label="Sum of Part 2 Calculated Values" value={sumOfPart2CalculatedValues} />
+              </div>
+              {part2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
+                 <p className="text-sm text-amber-600 dark:text-amber-400">
+                    Enter a non-zero AV/OH value for components with excess units to see Part 2 calculations.
+                </p>
+              )}
+            </div>
+          )}
+          {part2Results.length === 0 && excessAddResults.length > 0 && (
+             <p className="text-sm text-muted-foreground">
+                Enter "Total Excess Units to Add" in Part 1 and AV/OH values for components to see Part 2 calculations.
+            </p>
+          )}
+        </section>
       </form>
 
+      {/* Save/Load Section */}
       <div className="mt-8 pt-6 border-t">
         <h3 className="text-lg font-medium mb-3">Manage Saved Formulas</h3>
         <div className="space-y-4 p-4 border rounded-md bg-muted/30">
@@ -498,7 +663,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
               watchedComponents.some(c => !c.name || !c.percentageFromTicket || isNaN(parseFloat(c.percentageFromTicket)))
             }
           >
-            <Save className="mr-2 h-4 w-4" /> Save Current Formula (Original %s)
+            <Save className="mr-2 h-4 w-4" /> Save Current Formula (Original %s & AV/OH)
           </Button>
 
           {savedFormulas.length > 0 && (
