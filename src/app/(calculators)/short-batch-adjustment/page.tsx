@@ -39,6 +39,7 @@ import {
   DialogTitle as HelpDialogTitle,
   DialogTrigger as HelpDialogTrigger,
 } from "@/components/ui/dialog";
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface FormData {
@@ -53,6 +54,12 @@ interface FormData {
 const SAVED_BATCHES_KEY = 'chemcalc_savedShortBatches_v3_formula_percentage';
 
 const ShortBatchAdjustmentPage: React.FC = () => {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const { toast } = useToast();
   const [savedBatches, setSavedBatches] = useLocalStorage<SavedBatch[]>(SAVED_BATCHES_KEY, []);
   const [selectedBatchToLoad, setSelectedBatchToLoad] = useState<string>('');
@@ -86,6 +93,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
 
   // Part 1: Calculate Adjusted Total Batch Weight
   useEffect(() => {
+    if (!isClient) return;
     const availWt = parseFloat(watchedAvailableLimitingMaterialWt);
     const ticketWt = parseFloat(watchedTicketLimitingMaterialWt);
     const origTotalWt = parseFloat(watchedOriginalStandardTotalBatchWt);
@@ -95,17 +103,15 @@ const ShortBatchAdjustmentPage: React.FC = () => {
       setCalculatedAdjustedTotalBatchWeight(adjustedWt);
       if (!isNaN(adjustedWt) && isFinite(adjustedWt)) {
         setValue('targetBatchWeightForComponents', adjustedWt.toFixed(4), { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-      } else {
-        // If Part 1 calculation is invalid, don't auto-fill Part 2, allow manual entry
       }
     } else {
       setCalculatedAdjustedTotalBatchWeight(null);
-      // If Part 1 inputs are incomplete/invalid, don't auto-fill Part 2
     }
-  }, [watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, setValue]);
+  }, [isClient, watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, setValue]);
 
   // Part 2: Calculate New Component Weights & Total Standard Percentage
   useEffect(() => {
+    if (!isClient) return;
     const targetBatchWtNum = parseFloat(watchedTargetBatchWeightForComponents);
     let currentTotalPercentage = 0;
     const newBreakdownResults: AdjustedComponent[] = [];
@@ -148,7 +154,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
         setSumOfCalculatedComponentWeights(null);
     }
 
-  }, [watchedTargetBatchWeightForComponents, watchedComponents]);
+  }, [isClient, watchedTargetBatchWeightForComponents, watchedComponents]);
 
   const handleSaveBatch = () => {
     const batchName = watch('saveBatchName');
@@ -214,6 +220,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
   const formula = "Part 1: Adj. Total Wt = (Avail. Limiting Wt / Ticket Limiting Wt) * Orig. Std. Total Wt. \nPart 2: New Comp. Wt = (Std. Comp. % / 100) * Target Batch Wt (from Part 1 or manual).";
 
   const resultsToCopy = useMemo(() => {
+    if (!isClient) return "";
     let text = `Short Batch Adjustment Calculation:\n\n`;
     text += `== Part 1: Calculate Adjusted Total Batch Weight ==\n`;
     text += `Available Limiting Material Weight: ${watchedAvailableLimitingMaterialWt}\n`;
@@ -232,7 +239,35 @@ const ShortBatchAdjustmentPage: React.FC = () => {
       text += `Warning: Total standard percentage of components is ${totalStandardPercentage.toFixed(2)}%, not 100%.\n`;
     }
     return text;
-  }, [watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, calculatedAdjustedTotalBatchWeight, watchedTargetBatchWeightForComponents, componentBreakdownResults, sumOfCalculatedComponentWeights, totalStandardPercentage]);
+  }, [isClient, watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, calculatedAdjustedTotalBatchWeight, watchedTargetBatchWeightForComponents, componentBreakdownResults, sumOfCalculatedComponentWeights, totalStandardPercentage]);
+
+  if (!isClient) {
+    // Return a loading state or null while waiting for client-side mount
+    return (
+      <CalculatorWrapper
+        title="Short Batch Adjustment Calculator"
+        description="Calculates adjusted batch size based on a limiting material, then breaks down the new batch into component weights using standard formula percentages."
+      >
+        <div className="space-y-8">
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <h3 className="text-xl font-semibold mb-3 text-primary">Part 1: Determine Adjusted Total Batch Weight</h3>
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </section>
+          <Separator />
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+             <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Calculate Component Weights for Adjusted Batch</h3>
+            <Skeleton className="h-10 w-full" />
+            <Label>Components (Standard % on Batch Ticket)</Label>
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-10 w-1/3" />
+          </section>
+        </div>
+      </CalculatorWrapper>
+    );
+  }
 
   return (
     <CalculatorWrapper
@@ -428,7 +463,7 @@ const ShortBatchAdjustmentPage: React.FC = () => {
                           <li><strong>Standard %:</strong> Enter the percentage of this component as specified on the original, full-size batch ticket. (e.g., 25 %)</li>
                       </ul>
                        <p className="mt-1">Use the <span className="inline-flex items-center"><PlusCircle className="h-3 w-3 mr-1"/> Add Component</span> button or <Trash2 className="inline-block h-3 w-3"/> icon to manage components.</p>
-                       <p className="mt-1">The "Total Standard %" displayed should ideally be 100%. If not, the sum of new component weights may not match the target batch weight exactly.</p>
+                       <p className="mt-1">The "Total Standard %" displayed should ideally be 100%. If not, the sum of new component weights may not match the target batch weight.</p>
                     </li>
                   </ul>
                   <p className="mt-2 text-muted-foreground">
