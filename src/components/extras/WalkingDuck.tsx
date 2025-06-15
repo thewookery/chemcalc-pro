@@ -3,20 +3,31 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 
-// Updated SVG to be head-only
+// Updated SVG to be a mallard-like head with "👀" eyes
 const DuckSVG: React.FC = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 30" className="w-12 h-12 md:w-16 md:h-16">
-    {/* Head */}
-    <circle fill="#FFD700" stroke="#B28900" strokeWidth="1.5" cx="15" cy="15" r="14" />
-    {/* Eyes (Emoji Style "👀") - adjusted for new viewBox */}
-    <circle fill="#FFFFFF" cx="11" cy="13" r="4.5" />
-    <circle fill="#000000" cx="12" cy="13" r="2.2" /> 
-    <circle fill="#FFFFFF" cx="21" cy="13" r="4.5" />
-    <circle fill="#000000" cx="22" cy="13" r="2.2" />
-    {/* Beak - adjusted for new viewBox */}
-    <polygon fill="#FFA500" stroke="#B28900" strokeWidth="1" points="28,13 38,18 28,23" />
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 36" className="w-12 h-12 md:w-16 md:h-16">
+    {/* Head (Green Ellipse) */}
+    <ellipse cx="23" cy="18" rx="16" ry="14" fill="#008060" stroke="#004D38" strokeWidth="1.5" />
+    
+    {/* Beak (Yellow Polygon) */}
+    <polygon points="34,14 46,16 46,22 34,24" fill="#FFCC00" stroke="#B28900" strokeWidth="1" />
+    
+    {/* Beak line detail */}
+    <line x1="34" y1="19" x2="45" y2="19" stroke="#B28900" strokeWidth="0.7" />
+    
+    {/* Nostril (Dark spot on beak) */}
+    <circle cx="43" cy="17.5" r="1.2" fill="#555555" />
+
+    {/* Eyes (Emoji Style "👀") */}
+    {/* Right Eye */}
+    <circle fill="#FFFFFF" cx="29" cy="16" r="4.5" />
+    <circle fill="#000000" cx="30" cy="16" r="2.2" /> 
+    {/* Left Eye */}
+    <circle fill="#FFFFFF" cx="20" cy="16" r="4.5" />
+    <circle fill="#000000" cx="21" cy="16" r="2.2" />
   </svg>
 );
+
 
 interface PeekPosition {
   id: string;
@@ -136,4 +147,3 @@ const PeekingDuck: React.FC = () => {
 };
 
 export default PeekingDuck;
-
