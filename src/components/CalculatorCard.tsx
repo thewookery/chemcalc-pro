@@ -18,8 +18,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
           <div className="flex items-center justify-between mb-2">
             {IconComponent && <IconComponent className={cn(
               "h-8 w-8 text-primary transition-transform duration-300 ease-in-out",
-              "group-hover:scale-110 group-hover:rotate-3",
-              "animate-idle-wiggle"
+              "group-hover:scale-110 group-hover:rotate-3"
             )} />}
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
           </div>
