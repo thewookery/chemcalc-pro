@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { CalculatorMeta } from '@/types';
-import { ArrowRight, Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers, Grain, HelpCircle as DefaultIcon } from 'lucide-react'; // Added Grain
+import { ArrowRight, Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers, TestTube2, HelpCircle as DefaultIcon } from 'lucide-react'; // Removed Grain, ensured TestTube2 is present
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -24,7 +24,7 @@ const iconMap: { [key: string]: React.ElementType } = {
   Pipette,
   FilePlus,
   Layers,
-  Grain, // Added Grain
+  TestTube2, // Ensured TestTube2 is here
   DefaultIcon,
 };
 
