@@ -34,21 +34,23 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 
   useEffect(() => {
     // Calculate random delay for the float animation (25s to 40s)
-    const minFloatDelay = 25; // seconds
-    const maxFloatDelay = 40; // seconds
-    const initialFloatDelaySec = Math.random() * (maxFloatDelay - minFloatDelay) + minFloatDelay;
+    const minFloatDelaySec = 25;
+    const maxFloatDelaySec = 40;
+    const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
+    const initialFloatDelaySec = Math.random() * floatAnimationDurationVariation + minFloatDelaySec;
+    
     setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
 
     // Determine if this icon gets a chance to have the rainbow animation
-    const rainbowProbability = 0.2; // 20% chance
+    const rainbowProbability = 0.01; // 1% chance (1 in 100)
     const shouldAttemptRainbow = Math.random() < rainbowProbability;
 
     let rainbowTimerId: NodeJS.Timeout;
 
     if (shouldAttemptRainbow) {
       // Schedule rainbow fade to start 20 seconds after the float animation begins
-      // The total delay from mount is initialFloatDelaySec (for float to start) + 20s (wait time)
-      const totalDelayForRainbowMs = (initialFloatDelaySec + 20) * 1000;
+      const delayForRainbowToStartAfterFloatMs = 20 * 1000;
+      const totalDelayForRainbowMs = (initialFloatDelaySec * 1000) + delayForRainbowToStartAfterFloatMs;
       
       rainbowTimerId = setTimeout(() => {
         setCanStartRainbow(true);
@@ -88,4 +90,3 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
-
