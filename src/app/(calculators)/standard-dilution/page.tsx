@@ -131,13 +131,13 @@ Water/Diluent to Add: ${waterToAdd.toFixed(3)} (units)`;
               </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">4. Understanding the Results</h4>
-                <p className="mb-1 text-muted-foreground">
+                <div className="mb-1 text-muted-foreground">
                   The calculator will display:
                   <ul className="list-disc list-inside pl-4">
                     <li><strong>Volume of Stock to Use (V1):</strong> The amount of your stock solution (M1) needed.</li>
                     <li><strong>Water/Diluent to Add:</strong> The amount of solvent (e.g., water) needed to reach the final volume (V2).</li>
                   </ul>
-                </p>
+                </div>
                 <p className="mb-1 text-muted-foreground">The formulas used are:</p>
                 <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
                 <p className="text-muted-foreground">

@@ -128,14 +128,14 @@ Saponification Value: ${sapValue.toFixed(3)}`;
                   The calculator will display the "Saponification Value". The formula used is:
                 </p>
                 <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <p className="text-muted-foreground">
+                <div className="text-muted-foreground">
                   Where:
                   <ul className="list-disc list-inside pl-4">
                     <li>(Blank Titrated - Sample Titrate) is the difference in titrant volume.</li>
                     <li>The factor 28.05 is derived from (Normality of HCl × Molecular weight of KOH). For 0.5N HCl, this is (0.5 × 56.108) ≈ 28.05. Ensure this factor matches your specific titrant normality.</li>
                     <li>Sample Weight is in grams.</li>
                   </ul>
-                </p>
+                </div>
               </section>
             </div>
             <DialogFooter>

@@ -131,14 +131,14 @@ Iodine Value: ${iodineValue.toFixed(3)}`;
                   The calculator will display the "Iodine Value". The formula used is:
                 </p>
                 <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <p className="text-muted-foreground">
+                <div className="text-muted-foreground">
                   Where:
                   <ul className="list-disc list-inside pl-4">
                     <li>(Blank - Sample) is the difference in titrant volume, representing the amount of iodine consumed by the sample.</li>
                     <li>The factor <span className="font-mono">{FACTOR}</span> is typically derived from: (Normality of Thiosulfate × Atomic weight of Iodine × 100) / (1000 × 100) then simplified to get g Iodine per g sample for 100g basis. Or more directly (Normality of Thiosulfate × 12.69) when final result units are considered. For 0.1N Na₂S₂O₃, this factor is often 1.269 or rounded to {FACTOR}. Ensure this factor matches your specific laboratory procedure and titrant normality.</li>
                     <li>Sample Weight is in grams.</li>
                   </ul>
-                </p>
+                </div>
               </section>
             </div>
             <DialogFooter>

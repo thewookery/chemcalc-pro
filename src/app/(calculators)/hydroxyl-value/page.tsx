@@ -149,7 +149,7 @@ Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
                   The calculator will display the "Hydroxyl Value". The formula used is:
                 </p>
                 <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <p className="text-muted-foreground">
+                <div className="text-muted-foreground">
                   Where:
                   <ul className="list-disc list-inside pl-4">
                     <li>(Blank - Sample) is the difference in titrant volume.</li>
@@ -158,7 +158,7 @@ Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
                     <li>Weight is the sample weight in grams.</li>
                     <li>Acid Value is the pre-determined AV of the sample.</li>
                   </ul>
-                </p>
+                </div>
               </section>
             </div>
             <DialogFooter>
