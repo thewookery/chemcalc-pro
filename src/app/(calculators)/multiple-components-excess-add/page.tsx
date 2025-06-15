@@ -107,7 +107,6 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
           role="combobox"
           aria-expanded={isOpen}
           className="w-full justify-between text-input-foreground calculator-input h-9 text-sm"
-          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <span className="truncate">{triggerText}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
