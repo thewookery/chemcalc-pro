@@ -56,6 +56,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Skeleton } from '@/components/ui/skeleton';
 
 const SAVED_BATCHES_KEY = 'chemcalc_savedFormulas_excessAndFull_v1';
 
@@ -175,6 +176,11 @@ interface DisplayRow {
 }
 
 const MultipleComponentsExcessAddPage: React.FC = () => {
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const { toast } = useToast();
   const [savedFormulas, setSavedFormulas] = useLocalStorage<SavedBatch[]>(SAVED_BATCHES_KEY, []);
   const [selectedFormulaToLoad, setSelectedFormulaToLoad] = useState<string>('');
@@ -216,6 +222,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
 
   useEffect(() => {
+    if (!isClient) return;
     const parsedTotalExcessUnits = parseFloat(watchedTotalExcessUnitsToAdd);
     let currentTotalOriginalPerc = 0;
     const tempResults: CalculatedExcessComponent[] = [];
@@ -281,9 +288,10 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     setSumOfStandardizedPercentage(currentSumOfStandardizedPerc);
     setSumOfCalculatedExcessUnits((!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits >= 0) ? currentSumOfExcessUnits : 0);
 
-  }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
+  }, [isClient, watchedComponents, watchedTotalExcessUnitsToAdd]);
 
   useEffect(() => {
+    if (!isClient) return;
     const newPart2Results: Part2CalculatedValueComponent[] = [];
     let currentSumOfUnitsForBatchWeight = 0;
     let allInputsValidForSum = true;
@@ -332,9 +340,10 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         setSumOfUnitsForTargetBatchWeight(null);
     }
 
-  }, [excessAddResults, watchedTargetBatchWeight]);
+  }, [isClient, excessAddResults, watchedTargetBatchWeight]);
 
   useEffect(() => {
+    if (!isClient) return;
     const combined: DisplayRow[] = excessAddResults.map((exRes, index) => {
       const p2Res = part2Results[index] || { percentageOfAdd: NaN, unitsForBatchWeight: NaN };
       return {
@@ -348,12 +357,13 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       };
     });
     setDisplayResults(combined);
-  }, [excessAddResults, part2Results]);
+  }, [isClient, excessAddResults, part2Results]);
 
 
   const formula = `1. Std. % = (Comp. % / Total Orig. %) * 100.\n2. Excess Units = (Std. % / 100) * Total Excess Units.\n3. % of Add = (Excess Units / AV_OH) * 100.\n4. # to Add (Batch Wt.) = (% of Add / 100) * Target Batch Wt.`;
 
   const resultsToCopy = useMemo(() => {
+    if (!isClient) return "";
     let text = `Multiple Components Calculation:\n\n`;
     text += `Batch Weight: ${watchedTargetBatchWeight}\n`;
     text += `Total Excess Units to Add: ${watchedTotalExcessUnitsToAdd}\n\n`;
@@ -380,7 +390,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     text += `Sum of '# to add (Batch Wt.)' Values: ${sumOfUnitsForTargetBatchWeight !== null && !isNaN(sumOfUnitsForTargetBatchWeight) ? sumOfUnitsForTargetBatchWeight.toFixed(3) : 'N/A'}\n`;
 
     return text;
-  }, [watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, displayResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, sumOfUnitsForTargetBatchWeight]);
+  }, [isClient, watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, displayResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, sumOfUnitsForTargetBatchWeight]);
 
   const handleSaveFormula = () => {
     const formulaName = watch('saveFormulaName');
@@ -450,6 +460,36 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   };
 
   const sumOfStandardizedPercentageClass = Math.abs(sumOfStandardizedPercentage - 100) < 0.001 ? 'text-green-600 dark:text-green-400' : 'text-destructive';
+
+  if (!isClient) {
+    return (
+      <CalculatorWrapper
+        title="Multiple Components Calculator"
+        description="Define components, calculate excess additions, and determine full batch component weights based on a target batch size."
+      >
+        <div className="space-y-8">
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <h3 className="text-xl font-semibold mb-3 text-primary">Component Details</h3>
+            <Skeleton className="h-10 w-full mb-2" />
+            <Skeleton className="h-10 w-full mb-2" />
+            <Skeleton className="h-10 w-full" />
+          </section>
+          <Separator />
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+            <h3 className="text-xl font-semibold mb-3 text-primary">Overall Batch Parameters</h3>
+            <Skeleton className="h-10 w-full mb-2" />
+            <Skeleton className="h-10 w-full" />
+          </section>
+           <Separator />
+          <section className="space-y-4 p-4 border rounded-md bg-muted/30">
+             <h3 className="text-xl font-semibold mb-3 text-primary">Calculated Results</h3>
+            <Skeleton className="h-12 w-full mb-2" />
+            <Skeleton className="h-12 w-full" />
+          </section>
+        </div>
+      </CalculatorWrapper>
+    );
+  }
 
 
   return (
@@ -846,4 +886,3 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
-
