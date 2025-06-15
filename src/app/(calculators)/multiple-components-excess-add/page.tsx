@@ -342,7 +342,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   }, [excessAddResults, part2Results]);
 
 
-  const formula = `1. Std. % = (Comp. % / Total Orig. %) * 100.\n2. Excess Units = (Std. % / 100) * Total Excess Units.\n3. % of Add = (Excess Units / AV_OH) * 100.\n4. # to Add (Target Wt.) = (% of Add / 100) * Target Batch Wt.`;
+  const formula = `1. Std. % = (Comp. % / Total Orig. %) * 100.\n2. Excess Units = (Std. % / 100) * Total Excess Units.\n3. % of Add = (Excess Units / AV_OH) * 100.\n4. # to Add (Batch Wt.) = (% of Add / 100) * Target Batch Wt.`;
 
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Calculation:\n\n`;
