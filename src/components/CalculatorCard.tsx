@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { CalculatorMeta } from '@/types';
-import { ArrowRight, Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers, HelpCircle } from 'lucide-react';
+import { ArrowRight, Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers, HelpCircle as DefaultIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -24,80 +24,82 @@ const iconMap: { [key: string]: React.ElementType } = {
   Pipette,
   FilePlus,
   Layers,
-  HelpCircle, // Default/fallback icon
+  DefaultIcon,
 };
 
 const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
-  const IconComponent = calculator.icon ? iconMap[calculator.icon] || iconMap['HelpCircle'] : iconMap['HelpCircle'];
+  const IconComponent = calculator.icon ? iconMap[calculator.icon] || iconMap['DefaultIcon'] : iconMap['DefaultIcon'];
   
   const [iconFloatStyle, setIconFloatStyle] = useState<React.CSSProperties>({});
+  const [isIconFloatAnimationActive, setIsIconFloatAnimationActive] = useState(false);
   const [canStartRainbow, setCanStartRainbow] = useState(false);
   
   const [cardGlitchStyle, setCardGlitchStyle] = useState<React.CSSProperties>({});
   const [glitchAnimationCount, setGlitchAnimationCount] = useState(0);
   const [shouldAttemptInitialGlitch, setShouldAttemptInitialGlitch] = useState(false);
 
-
   const rainbowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const iconFloatTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const firstGlitchTimerRef = useRef<NodeJS.Timeout | null>(null);
   const secondGlitchCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Icon Float Animation Delay
+    // Icon Float Animation
     const minFloatDelaySec = 25;
     const maxFloatDelaySec = 40;
     const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
-    const initialFloatDelaySec = Math.random() * floatAnimationDurationVariation + minFloatDelaySec;
-    setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
+    const actualIconFloatDelaySec = Math.random() * floatAnimationDurationVariation + minFloatDelaySec;
 
-    // Rainbow Animation Logic
-    const rainbowProbability = 0.01; // 1 in 100 chance
-    const shouldAttemptRainbow = Math.random() < rainbowProbability;
-    if (shouldAttemptRainbow) {
-      const delayForRainbowToStartAfterFloatMs = 20 * 1000;
-      const totalDelayForRainbowMs = (initialFloatDelaySec * 1000) + delayForRainbowToStartAfterFloatMs;
-      
-      if (rainbowTimeoutRef.current) clearTimeout(rainbowTimeoutRef.current);
-      rainbowTimeoutRef.current = setTimeout(() => {
-        setCanStartRainbow(true);
-      }, totalDelayForRainbowMs);
-    }
+    setIconFloatStyle({ animationDelay: `${actualIconFloatDelaySec.toFixed(2)}s` });
+
+    if (iconFloatTimeoutRef.current) clearTimeout(iconFloatTimeoutRef.current);
+    iconFloatTimeoutRef.current = setTimeout(() => {
+      setIsIconFloatAnimationActive(true);
+
+      // Rainbow Animation Logic (starts 20s after float animation begins)
+      const rainbowProbability = 0.01; // 1 in 100 chance
+      const shouldAttemptRainbow = Math.random() < rainbowProbability;
+      if (shouldAttemptRainbow) {
+        const delayForRainbowToStartAfterFloatMs = 20 * 1000;
+        
+        if (rainbowTimeoutRef.current) clearTimeout(rainbowTimeoutRef.current);
+        rainbowTimeoutRef.current = setTimeout(() => {
+          setCanStartRainbow(true);
+        }, delayForRainbowToStartAfterFloatMs);
+      }
+    }, actualIconFloatDelaySec * 1000);
+
 
     // Glitch Animation Logic
     const initialGlitchProbability = 1 / 25; // 1 in 25 chance
     const attemptThisGlitch = Math.random() < initialGlitchProbability;
     setShouldAttemptInitialGlitch(attemptThisGlitch);
 
-
     if (attemptThisGlitch) {
       const baseMinGlitchDelayMs = 10000; // 10 seconds base
       const randomAdditionalGlitchMs = Math.random() * 10000; // 0 to 10 seconds additional
       const actualInitialGlitchDelayMs = baseMinGlitchDelayMs + randomAdditionalGlitchMs;
-      const glitchDurationMs = 250; // Duration of the glitch animation
-
+      
       setCardGlitchStyle({ animationDelay: `${actualInitialGlitchDelayMs / 1000}s` });
       
       if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
       firstGlitchTimerRef.current = setTimeout(() => {
-        setGlitchAnimationCount(1); // Trigger the first animation
+        setGlitchAnimationCount(1); 
 
-        const checkForSecondGlitch = () => {
-          if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
-          secondGlitchCheckTimerRef.current = setTimeout(() => {
-            const secondGlitchProbability = 0.20; // 1/5 chance for second glitch
-            if (Math.random() < secondGlitchProbability) {
-              setCardGlitchStyle({ animationDelay: '0s' }); // Second glitch plays immediately
-              setGlitchAnimationCount(prevCount => prevCount + 1); // Re-trigger by changing key
-            }
-          }, 5000); // 5-second pause after first glitch duration
-        };
-        checkForSecondGlitch(); // Check for second glitch after first one finishes
-      }, actualInitialGlitchDelayMs); // Schedule first glitch
+        if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
+        secondGlitchCheckTimerRef.current = setTimeout(() => {
+          const secondGlitchProbability = 0.20; 
+          if (Math.random() < secondGlitchProbability) {
+            setCardGlitchStyle({ animationDelay: '0s' }); 
+            setGlitchAnimationCount(prevCount => prevCount + 1); 
+          }
+        }, 5000); 
+      }, actualInitialGlitchDelayMs); 
     }
-
 
     return () => {
       if (rainbowTimeoutRef.current) clearTimeout(rainbowTimeoutRef.current);
+      if (iconFloatTimeoutRef.current) clearTimeout(iconFloatTimeoutRef.current);
       if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
       if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
     };
@@ -112,7 +114,8 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             {IconComponent && (
               <IconComponent
                 className={cn(
-                  "h-8 w-8 text-primary transition-transform duration-300 ease-in-out animate-icon-float",
+                  "h-8 w-8 text-primary transition-transform duration-300 ease-in-out",
+                  isIconFloatAnimationActive && "animate-icon-float",
                   "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none",
                   canStartRainbow && "animate-rainbow-fade"
                 )}
