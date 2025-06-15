@@ -7,8 +7,7 @@ interface DuckSVGProps {
   rotationAngle?: number;
 }
 
-// Updated SVG for a more detailed mallard-like head with "👀" eyes, neck ring, and a larger, higher BLACK bucket hat
-// Now includes rotation capability
+// SVG for a mallard-like head with "👀" eyes, neck ring, and a black bucket hat, with rotation
 const DuckSVG: React.FC<DuckSVGProps> = ({ rotationAngle = 0 }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 42" className="w-12 h-12 md:w-16 md:h-16">
     <g transform={`rotate(${rotationAngle} 24 21)`}>
@@ -20,7 +19,7 @@ const DuckSVG: React.FC<DuckSVGProps> = ({ rotationAngle = 0 }) => (
       
       {/* White Neck Ring */}
       <path 
-        d="M12,30 Q23,34 34,30 A16,14 0 0,0 12,30 Z" // Adjusted y-coords for neck ring
+        d="M12,30 Q23,34 34,30 A16,14 0 0,0 12,30 Z"
         fill="#FFFFFF" 
         stroke="#E0E0E0" 
         strokeWidth="1"
@@ -57,23 +56,21 @@ interface PeekPosition {
   positionClasses: string;
   hiddenTransform: string;
   visibleTransform: string;
-  rotation: number; // Added rotation angle
+  rotation: number;
 }
 
 const PEEK_TRANSITION_DURATION = 500; // ms
 const PEEK_VISIBLE_DURATION = 1500; // ms
 
-// Adjusted visibleTransforms to show ~90% of the head
-// Added rotation values. Assumes original SVG beak points to the right (0 degrees).
 const peekPositions: PeekPosition[] = [
-  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -45 }, // Peeking up-right
-  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -90 }, // Peeking straight up
-  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -135 }, // Peeking up-left
-  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[10%]', rotation: 0 },    // Peeking right
-  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[10%]', rotation: 180 }, // Peeking left
-  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 45  },  // Peeking down-right
-  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 90  },  // Peeking straight down
-  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 135 }, // Peeking down-left
+  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -45 },
+  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -90 },
+  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[10%]', rotation: -135 },
+  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[10%]', rotation: 0 },
+  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[10%]', rotation: 180 },
+  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 45  },
+  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 90  },
+  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[10%]', rotation: 135 },
 ];
 
 
@@ -82,7 +79,6 @@ const PeekingDuck: React.FC = () => {
   const [currentPositionClasses, setCurrentPositionClasses] = useState<string>(peekPositions[0].positionClasses);
   const [currentTransform, setCurrentTransform] = useState<string>(peekPositions[0].hiddenTransform);
   const [currentRotation, setCurrentRotation] = useState<number>(peekPositions[0].rotation);
-
 
   const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
@@ -117,22 +113,24 @@ const PeekingDuck: React.FC = () => {
         if (!isMounted) return;
 
         const randomIndex = Math.floor(Math.random() * peekPositions.length);
-        const newPosition = peekPositions[randomIndex];
+        const newPositionData = peekPositions[randomIndex];
 
-        setCurrentPositionClasses(newPosition.positionClasses);
-        setCurrentTransform(newPosition.hiddenTransform); 
-        setCurrentRotation(newPosition.rotation);
-
+        setCurrentPositionClasses(newPositionData.positionClasses);
+        setCurrentRotation(newPositionData.rotation);
+        setCurrentTransform(newPositionData.hiddenTransform); 
 
         const animationStartTimer = setTimeout(() => {
           if (!isMounted) return;
-          setCurrentTransform(newPosition.visibleTransform);
+          requestAnimationFrame(() => { // Ensure prior styles are applied before animating
+            if (!isMounted) return;
+            setCurrentTransform(newPositionData.visibleTransform);
+          });
         }, 50); 
         timeoutsRef.current.push(animationStartTimer);
 
         const visibleDurationTimer = setTimeout(() => {
           if (!isMounted) return;
-          setCurrentTransform(newPosition.hiddenTransform); 
+          setCurrentTransform(newPositionData.hiddenTransform); 
 
           const nextCycleTimer = setTimeout(() => {
             if (!isMounted) return;
@@ -177,4 +175,3 @@ const PeekingDuck: React.FC = () => {
 };
 
 export default PeekingDuck;
-
