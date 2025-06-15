@@ -98,11 +98,10 @@ export default {
           '100%': { transform: 'translateY(0px)', opacity: '1' },
         },
         idleWiggle: {
-          '0%': { transform: 'rotate(0deg) scale(1)' },
-          '90%': { transform: 'rotate(0deg) scale(1)' }, // End of idle, start of wiggle
-          '93.3%': { transform: 'rotate(-15deg) scale(1.2)' }, // Tilt one way
-          '96.6%': { transform: 'rotate(15deg) scale(1.2)' },  // Tilt other way
-          '100%': { transform: 'rotate(0deg) scale(1)' }     // Return to idle
+          '0%, 80%, 100%': { transform: 'rotate(0deg) scale(1)' },
+          '85%': { transform: 'rotate(-12deg) scale(1.15)' },
+          '90%': { transform: 'rotate(12deg) scale(1.15)' },
+          '95%': { transform: 'rotate(-6deg) scale(1.05)' },
         },
       },
       animation: {
@@ -110,7 +109,7 @@ export default {
         'accordion-up': 'accordion-up 0.2s ease-out',
         fadeIn: 'fadeIn 0.5s ease-in-out',
         slideUp: 'slideUp 0.5s ease-in-out',
-        'idle-wiggle': 'idleWiggle 10s infinite linear', // Changed to linear
+        'idle-wiggle': 'idleWiggle 10s infinite linear',
       },
     },
   },
