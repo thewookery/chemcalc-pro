@@ -332,7 +332,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     setPart2Results(newPart2Results);
     
-    if (allInputsValidForSum && !isNaN(currentSumOfUnitsForBatchWeight) && !isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && newPart2Results.some(r => !isNaN(r.unitsForBatchWeight))) {
+    if (allInputsValidForSum && !isNaN(currentSumOfUnitsForBatchWeight) && !isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && newPart2Results.some(r => typeof r.unitsForBatchWeight === 'number' && !isNaN(r.unitsForBatchWeight))) {
         setSumOfUnitsForTargetBatchWeight(currentSumOfUnitsForBatchWeight);
     } else if (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits !== 0 && (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0))) {
         setSumOfUnitsForTargetBatchWeight(allInputsValidForSum ? currentSumOfUnitsForBatchWeight : null);
@@ -886,3 +886,4 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
+

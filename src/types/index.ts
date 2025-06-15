@@ -50,6 +50,6 @@ export interface Part2CalculatedValueComponent {
   excessUnits: number; // from Part 1
   avOrOhValue: number; // from input
   percentageOfAdd: number; // (Excess Units / AV_OH) * 100
-  unitsForBatchWeight?: number; // (percentageOfAdd / 100) * part2BatchWeight
+  unitsForBatchWeight: number; // (percentageOfAdd / 100) * part2BatchWeight (will be NaN if not calculable)
 }
 
