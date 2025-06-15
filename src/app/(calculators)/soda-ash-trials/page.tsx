@@ -31,6 +31,7 @@ const SodaAshTrialsCalculatorPage: React.FC = () => {
     const wt = parseFloat(batchWeight);
 
     if (!isNaN(av) && !isNaN(wt) && wt > 0 && av >= 0) {
+      // Calculation: (5 * AV * BatchWeight) / 159
       const calculatedAmount = (5 * av * wt) / 159;
       if (calculatedAmount < MINIMUM_ADD_AMOUNT) {
         setSodaAshAmount(MINIMUM_ADD_AMOUNT);
@@ -45,8 +46,8 @@ const SodaAshTrialsCalculatorPage: React.FC = () => {
     }
   }, [acidValue, batchWeight]);
 
-  const formula = `Soda Ash Amount (lbs) = (5 * AV * Batch Weight (lbs)) / 159`;
-  const formulaTooltip = `AV: Acid Value. If the calculated amount is less than ${MINIMUM_ADD_AMOUNT} lbs, the amount defaults to ${MINIMUM_ADD_AMOUNT} lbs.`;
+  const formula = `Soda Ash Amount (lbs) = ((5 * AV) / 159) * Batch Weight (lbs)`;
+  const formulaTooltip = `AV: Acid Value. If the calculated amount is less than ${MINIMUM_ADD_AMOUNT} lbs, the amount defaults to ${MINIMUM_ADD_AMOUNT} lbs. The calculation is (5 times Acid Value, divided by 159, then multiplied by Batch Weight).`;
 
   const resultsToCopy = useMemo(() => {
     if (sodaAshAmount === null) return "";
@@ -128,7 +129,7 @@ Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
                 <p className="mb-1 text-muted-foreground">
                   The calculator will display the "Soda Ash Add Amount" in pounds (lbs). The formula used is:
                 </p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
+                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono whitespace-pre-wrap">{formula}</code>
                 <p className="font-semibold mt-2">Minimum Add Rule:</p>
                 <p className="text-muted-foreground">
                   If the calculated soda ash amount is less than {MINIMUM_ADD_AMOUNT} lbs, the calculator will automatically set the "Soda Ash Add Amount" to {MINIMUM_ADD_AMOUNT} lbs. A notification will appear if this minimum is applied.
@@ -148,3 +149,5 @@ Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
 };
 
 export default SodaAshTrialsCalculatorPage;
+
+    
