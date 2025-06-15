@@ -80,7 +80,10 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[200px] overflow-y-auto">
+      <PopoverContent 
+        className="w-[--radix-popover-trigger-width] p-0 max-h-[200px] overflow-y-auto"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <Command
           filter={(itemValue, search) => { 
             if (itemValue.toLowerCase().includes(search.toLowerCase())) return 1;
@@ -212,12 +215,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Excess Add Calculation:\n`;
-    text += `Total Units to Add to Batch: ${watchedTotalUnitsToAddToBatch}\n\n`;
     text += `Components (% from Batch Ticket):\n`;
     watchedComponents.forEach((comp, index) => {
       text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}%\n`;
     });
     text += `Total Original % from Batch Ticket: ${totalOriginalPercentage.toFixed(2)}%\n\n`;
+    text += `Total Units to Add to Batch: ${watchedTotalUnitsToAddToBatch}\n\n`;
     text += `Calculated Breakdown:\n`;
     text += `Component Name | % from Ticket | Standardized % | Units to Add\n`;
     text += `------------------------------------------------------------------\n`;
@@ -268,8 +271,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 unit="%"
                 placeholder="e.g., 78.89"
                 {...register(`components.${index}.percentageFromTicket`, { 
-                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v) : ""),
-                    validate: value => value === "" || (typeof value === 'number' && value >= 0) || "% must be positive or empty"
+                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
+                    validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "% must be positive or empty"
                 })}
                 errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
               />
@@ -297,8 +300,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           label="Total Units to Add to Batch"
           unit="Units"
           {...register('totalUnitsToAddToBatch', { 
-            setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v) : ""),
-            validate: value => value === "" || (typeof value === 'number' && value >= 0) || "Must be positive or empty"
+            setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
+            validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
           })}
           placeholder="e.g., 20"
           tooltipText="The total combined amount of all excess components you intend to add."
@@ -361,7 +364,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             </div>
              { Math.abs(parseFloat(watchedTotalUnitsToAddToBatch) - sumOfCalculatedUnitsToAdd) > 0.001 && !isNaN(parseFloat(watchedTotalUnitsToAddToBatch)) && sumOfCalculatedUnitsToAdd > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
                 <p className="text-sm text-orange-500">
-                    Note: The sum of calculated units to add ({sumOfCalculatedUnitsToAdd.toFixed(3)}) does not exactly match the total units to add input ({parseFloat(watchedTotalUnitsToAddToBatch).toFixed(3)}). This may be due to rounding or if total original % is zero.
+                    Note: The sum of calculated units to add ({sumOfCalculatedUnitsToAdd.toFixed(3)}) does not exactly match the total units to add input ({!isNaN(parseFloat(watchedTotalUnitsToAddToBatch)) ? parseFloat(watchedTotalUnitsToAddToBatch).toFixed(3) : 'N/A'}). This may be due to rounding or if total original % is zero.
                 </p>
             )}
             { totalOriginalPercentage === 0 && watchedComponents.some(c => c.percentageFromTicket === '' || parseFloat(c.percentageFromTicket) === 0) && parseFloat(watchedTotalUnitsToAddToBatch) > 0 && (
