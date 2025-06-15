@@ -21,8 +21,11 @@ const DuckSVG: React.FC = () => (
     />
     {/* Head */}
     <circle fill="#FFD700" stroke="#B28900" strokeWidth="3" cx="80" cy="45" r="15" />
-    {/* Eye */}
-    <circle fill="#000000" cx="83" cy="42" r="2" />
+    {/* New Eyes 👀 style */}
+    <circle fill="#FFFFFF" cx="76" cy="43" r="4.5" />
+    <circle fill="#000000" cx="77" cy="43" r="2.2" /> 
+    <circle fill="#FFFFFF" cx="86" cy="43" r="4.5" />
+    <circle fill="#000000" cx="87" cy="43" r="2.2" />
     {/* Beak */}
     <polygon fill="#FFA500" stroke="#B28900" strokeWidth="1.5" points="93,43 103,48 93,53" />
     {/* Simple static feet for a tiny duck */}
@@ -36,21 +39,20 @@ interface PeekPosition {
   positionClasses: string;
   hiddenTransform: string;
   visibleTransform: string;
-  // For potential future use: orientation?: 'up' | 'down' | 'left' | 'right';
 }
 
 const PEEK_TRANSITION_DURATION = 500; // ms
 const PEEK_VISIBLE_DURATION = 1500; // ms
 
 const peekPositions: PeekPosition[] = [
-  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[50%]' },
-  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[50%]' },
-  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[50%]' },
-  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[50%]' },
-  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[50%]' },
-  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[50%]' },
-  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[50%]' },
-  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[50%]' },
+  { id: 'BL', positionClasses: 'bottom-0 left-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[70%]' },
+  { id: 'BC', positionClasses: 'bottom-0 left-1/2 -translate-x-1/2', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[70%]' },
+  { id: 'BR', positionClasses: 'bottom-0 right-4', hiddenTransform: 'translate-y-full', visibleTransform: 'translate-y-[70%]' },
+  { id: 'ML', positionClasses: 'top-1/2 left-0 -translate-y-1/2', hiddenTransform: '-translate-x-full', visibleTransform: '-translate-x-[70%]' },
+  { id: 'MR', positionClasses: 'top-1/2 right-0 -translate-y-1/2', hiddenTransform: 'translate-x-full', visibleTransform: 'translate-x-[70%]' },
+  { id: 'TL', positionClasses: 'top-0 left-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[70%]' },
+  { id: 'TC', positionClasses: 'top-0 left-1/2 -translate-x-1/2', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[70%]' },
+  { id: 'TR', positionClasses: 'top-0 right-4', hiddenTransform: '-translate-y-full', visibleTransform: '-translate-y-[70%]' },
 ];
 
 
