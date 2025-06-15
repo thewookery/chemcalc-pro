@@ -43,15 +43,16 @@ const peekPositions: PeekPosition[] = [
 
 const PeekingDuck: React.FC = () => {
   const [isGloballyVisible, setIsGloballyVisible] = useState(false);
-  const [currentPositionClasses, setCurrentPositionClasses] = useState<string>('');
-  const [currentTransform, setCurrentTransform] = useState<string>('translate-y-full'); // Default to hidden off-screen
+  // Initialize with the first peek position to avoid undefined initial placement
+  const [currentPositionClasses, setCurrentPositionClasses] = useState<string>(peekPositions[0].positionClasses);
+  const [currentTransform, setCurrentTransform] = useState<string>(peekPositions[0].hiddenTransform);
 
   const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
 
   useEffect(() => {
     const initialDelayTimer = setTimeout(() => {
       setIsGloballyVisible(true);
-    }, 5000);
+    }, 5000); // 5 seconds
     timeoutsRef.current.push(initialDelayTimer);
 
     return () => {
@@ -71,7 +72,7 @@ const PeekingDuck: React.FC = () => {
     
     const schedulePeek = () => {
       if (!isMounted) return;
-      clearCurrentTimeouts(); // Clear any pending timeouts before scheduling new ones
+      clearCurrentTimeouts(); 
 
       const nextPeekDelay = Math.random() * 7000 + 3000; // 3-10 seconds
 
@@ -82,28 +83,25 @@ const PeekingDuck: React.FC = () => {
         const newPosition = peekPositions[randomIndex];
 
         setCurrentPositionClasses(newPosition.positionClasses);
-        setCurrentTransform(newPosition.hiddenTransform); // Ensure it's in hidden state for the new position
+        setCurrentTransform(newPosition.hiddenTransform); 
 
-        // Brief delay for styles to apply, then start "peek in"
         const animationStartTimer = setTimeout(() => {
           if (!isMounted) return;
           setCurrentTransform(newPosition.visibleTransform);
-        }, 50); // Small delay
+        }, 50); 
         timeoutsRef.current.push(animationStartTimer);
 
-        // Timer for how long the duck stays visible
         const visibleDurationTimer = setTimeout(() => {
           if (!isMounted) return;
-          setCurrentTransform(newPosition.hiddenTransform); // "Peek out"
+          setCurrentTransform(newPosition.hiddenTransform); 
 
-          // Timer for "peek out" animation to complete, then schedule next peek
           const nextCycleTimer = setTimeout(() => {
             if (!isMounted) return;
             schedulePeek();
           }, PEEK_TRANSITION_DURATION);
           timeoutsRef.current.push(nextCycleTimer);
 
-        }, PEEK_VISIBLE_DURATION + 50); // +50 to account for animationStartTimer
+        }, PEEK_VISIBLE_DURATION + 50); 
         timeoutsRef.current.push(visibleDurationTimer);
 
       }, nextPeekDelay);
@@ -138,3 +136,4 @@ const PeekingDuck: React.FC = () => {
 };
 
 export default PeekingDuck;
+
