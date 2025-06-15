@@ -100,13 +100,13 @@ export default {
         },
         iconFloat: {
           '0%': { transform: 'translate(0, 0) rotate(0deg)' },
-          '12.5%': { transform: 'translate(3px, -4px) rotate(-3deg)' },
-          '25%': { transform: 'translate(0px, -6px) rotate(0deg)' },
-          '37.5%': { transform: 'translate(-3px, -4px) rotate(3deg)' },
-          '50%': { transform: 'translate(-4px, 0px) rotate(0deg)' },
-          '62.5%': { transform: 'translate(-3px, 4px) rotate(-3deg)' },
-          '75%': { transform: 'translate(0px, 6px) rotate(0deg)' },
-          '87.5%': { transform: 'translate(3px, 4px) rotate(3deg)' },
+          '12.5%': { transform: 'translate(2px, -3px) rotate(-2deg)' },
+          '25%': { transform: 'translate(0px, -5px) rotate(0deg)' },
+          '37.5%': { transform: 'translate(-2px, -3px) rotate(2deg)' },
+          '50%': { transform: 'translate(-3px, 0px) rotate(0deg)' },
+          '62.5%': { transform: 'translate(-2px, 3px) rotate(-2deg)' },
+          '75%': { transform: 'translate(0px, 5px) rotate(0deg)' },
+          '87.5%': { transform: 'translate(2px, 3px) rotate(2deg)' },
           '100%': { transform: 'translate(0, 0) rotate(0deg)' },
         },
         rainbowFade: {
@@ -116,6 +116,18 @@ export default {
           '48%': { color: 'hsl(120, 100%, 60%)' },    /* Green */
           '64%': { color: 'hsl(240, 100%, 60%)' },    /* Blue */
           '80%': { color: 'hsl(280, 100%, 60%)' },    /* Purple */
+        },
+        glitchEffect: {
+          '0%, 100%': { transform: 'translate(0, 0) skew(0deg)', opacity: '1' },
+          '10%': { transform: 'translate(-3px, 2px) skew(-3deg)', opacity: '0.85' },
+          '20%': { transform: 'translate(2px, -3px) skew(4deg)', opacity: '1' },
+          '30%': { transform: 'translate(3px, 3px) skew(0deg)', opacity: '0.9' },
+          '40%': { transform: 'translate(-2px, -2px) skew(-2deg)', opacity: '1' },
+          '50%': { transform: 'translate(0, 0) skew(0deg)', opacity: '0.75' },
+          '60%': { transform: 'translate(-3px, 3px) skew(3deg)', opacity: '1' },
+          '70%': { transform: 'translate(2px, -2px) skew(-4deg)', opacity: '0.9' },
+          '80%': { transform: 'translate(0, 0) skew(0deg)', opacity: '1' },
+          '90%': { transform: 'translate(-2px, 2px) skew(2deg)', opacity: '0.95' },
         }
       },
       animation: {
@@ -125,8 +137,10 @@ export default {
         slideUp: 'slideUp 0.5s ease-in-out',
         'icon-float': 'iconFloat 100s infinite ease-in-out',
         'rainbow-fade': 'rainbowFade 15s infinite linear',
+        'glitch': 'glitchEffect 0.25s linear 10s 1 normal forwards',
       },
     },
   },
   plugins: [require('tailwindcss-animate')],
 } satisfies Config;
+

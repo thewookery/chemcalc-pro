@@ -33,7 +33,6 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const [canStartRainbow, setCanStartRainbow] = useState(false);
 
   useEffect(() => {
-    // Calculate random delay for the float animation (25s to 40s)
     const minFloatDelaySec = 25;
     const maxFloatDelaySec = 40;
     const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
@@ -41,14 +40,12 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
     
     setIconFloatStyle({ animationDelay: `${initialFloatDelaySec.toFixed(2)}s` });
 
-    // Determine if this icon gets a chance to have the rainbow animation
-    const rainbowProbability = 0.01; // 1% chance (1 in 100)
+    const rainbowProbability = 0.01; 
     const shouldAttemptRainbow = Math.random() < rainbowProbability;
 
     let rainbowTimerId: NodeJS.Timeout;
 
     if (shouldAttemptRainbow) {
-      // Schedule rainbow fade to start 20 seconds after the float animation begins
       const delayForRainbowToStartAfterFloatMs = 20 * 1000;
       const totalDelayForRainbowMs = (initialFloatDelaySec * 1000) + delayForRainbowToStartAfterFloatMs;
       
@@ -59,10 +56,10 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 
     return () => {
       if (shouldAttemptRainbow) {
-        clearTimeout(rainbowTimerId); // Cleanup timer on unmount
+        clearTimeout(rainbowTimerId); 
       }
     };
-  }, []); // Empty dependency array, runs once on mount
+  }, []); 
 
   return (
     <Link href={`/${calculator.slug}`} className="group block" aria-label={`Open ${calculator.name} calculator`}>
@@ -81,7 +78,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             )}
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
           </div>
-          <CardTitle className="text-lg font-semibold">{calculator.name}</CardTitle>
+          <CardTitle className="text-lg font-semibold animate-glitch">{calculator.name}</CardTitle>
           <CardDescription className="text-sm">{calculator.description}</CardDescription>
         </CardHeader>
       </Card>
@@ -90,3 +87,4 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
+
