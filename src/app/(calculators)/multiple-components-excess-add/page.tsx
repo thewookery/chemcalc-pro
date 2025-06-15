@@ -49,7 +49,7 @@ interface FormData {
   totalExcessUnitsToAdd: string;
   components: BatchTicketComponentInput[];
   saveFormulaName: string;
-  referenceOriginalTotalBatchWeightForSave: string; // For saving context
+  referenceOriginalTotalBatchWeightForSave: string; 
 }
 
 interface MaterialNameComboboxProps {
@@ -93,6 +93,7 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
           role="combobox"
           aria-expanded={isOpen}
           className="w-full justify-between text-input-foreground calculator-input h-9 text-sm"
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <span className="truncate">{triggerText}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -214,7 +215,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             name: comp.name || '',
             percentageFromTicket: originalPerc,
             standardizedPercentage: standardizedPerc,
-            unitsToAdd: unitsForThisComponent, // For excess
+            unitsToAdd: unitsForThisComponent, 
           });
         } else {
              tempResults.push({
@@ -250,38 +251,60 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     const validTargetFullBatchWt = (!isNaN(targetFullBatchWtNum) && isFinite(targetFullBatchWtNum) && targetFullBatchWtNum >= 0) ? targetFullBatchWtNum : NaN;
 
-    // Use standardized percentages from Part 1 (excessAddResults)
-    excessAddResults.forEach(compFromPart1 => {
-      const compName = compFromPart1.name || '';
-      const stdPerc = compFromPart1.standardizedPercentage; // This is already standardized to 100% sum
+    // Part 2 calculation is dependent on sumOfCalculatedExcessUnits being positive from Part 1
+    if (sumOfCalculatedExcessUnits > 0 && !isNaN(validTargetFullBatchWt) && excessAddResults.length > 0) {
+      excessAddResults.forEach(compFromPart1 => {
+        const compName = compFromPart1.name || '';
+        const unitsForThisComp = compFromPart1.unitsToAdd; // This is the 'excess unit' for the component from Part 1
 
-      let calculatedNewWeightForFullBatch = NaN;
-      if (!isNaN(validTargetFullBatchWt) && !isNaN(stdPerc) && stdPerc > 0) {
-        calculatedNewWeightForFullBatch = (stdPerc / 100) * validTargetFullBatchWt;
-        if (!isNaN(calculatedNewWeightForFullBatch) && isFinite(calculatedNewWeightForFullBatch)) {
-             newSumOfFullWeights += calculatedNewWeightForFullBatch;
-        } else {
-            calculatedNewWeightForFullBatch = NaN; 
+        let calculatedNewWeightForFullBatch = NaN;
+        let proportionAsPercentage = NaN;
+
+        // Ensure unitsForThisComp is a valid number and sumOfCalculatedExcessUnits is positive to avoid division by zero
+        if (!isNaN(unitsForThisComp) && isFinite(unitsForThisComp) && unitsForThisComp >= 0 && sumOfCalculatedExcessUnits > 0) {
+          const proportion = unitsForThisComp / sumOfCalculatedExcessUnits;
+          proportionAsPercentage = proportion * 100;
+          
+          if (!isNaN(proportion) && isFinite(proportion)) {
+            calculatedNewWeightForFullBatch = proportion * validTargetFullBatchWt;
+            if (!isNaN(calculatedNewWeightForFullBatch) && isFinite(calculatedNewWeightForFullBatch)) {
+              newSumOfFullWeights += calculatedNewWeightForFullBatch;
+            } else {
+              calculatedNewWeightForFullBatch = NaN;
+            }
+          }
         }
-      }
-      
-      newFullBatchResults.push({
-        name: compName,
-        standardPercentage: !isNaN(stdPerc) ? stdPerc : NaN, // Store the standardized percentage used
-        newRequiredWeight: calculatedNewWeightForFullBatch,
+        
+        newFullBatchResults.push({
+          name: compName,
+          // This field in AdjustedComponent now stores the component's share of total excess, as a percentage
+          standardPercentage: !isNaN(proportionAsPercentage) ? proportionAsPercentage : NaN, 
+          newRequiredWeight: calculatedNewWeightForFullBatch,
+        });
       });
-    });
+    } else {
+      // If dependencies for Part 2 calc are not met (e.g., no excess units calculated), create empty/placeholder results
+      const sourceForPlaceholders = excessAddResults.length > 0 ? excessAddResults : watchedComponents;
+      sourceForPlaceholders.forEach(comp => {
+        newFullBatchResults.push({
+          name: comp.name || (comp as BatchTicketComponentInput).name || '', // Ensure name is accessible
+          standardPercentage: NaN,
+          newRequiredWeight: NaN,
+        });
+      });
+    }
 
     setFullBatchBreakdownResults(newFullBatchResults);
-    if (!isNaN(newSumOfFullWeights) && isFinite(newSumOfFullWeights) && !isNaN(validTargetFullBatchWt)) {
+    // Only set sum if calculation was possible
+    if (sumOfCalculatedExcessUnits > 0 && !isNaN(newSumOfFullWeights) && isFinite(newSumOfFullWeights) && !isNaN(validTargetFullBatchWt)) {
         setSumOfFullBatchWeights(newSumOfFullWeights);
     } else {
         setSumOfFullBatchWeights(null);
     }
-  }, [excessAddResults, desiredTotalBatchWeightForFullBatch]);
+  }, [excessAddResults, desiredTotalBatchWeightForFullBatch, sumOfCalculatedExcessUnits, watchedComponents]);
 
 
-  const formula = "1. Std. % (for Excess) = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\n2. Full Batch Wt. (per Comp.) = (Std. % from Part 1 / 100) * Desired Total Full Batch Wt.";
+  const formula = "1. Std. % (for Excess) = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\n2. Full Batch Wt. (per Comp.) = (Comp. Excess Units / Total Excess Units) * Desired Total Full Batch Wt.";
   
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Calculation:\n\n== Part 1: Excess Add Calculation ==\n`;
@@ -302,13 +325,18 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     text += `== Part 2: Full Batch Component Breakdown ==\n`;
     text += `Desired Total Batch Weight (for Full Batch): ${desiredTotalBatchWeightForFullBatch}\n`;
-    text += `Component Breakdown (using Standardized % from Part 1):\n`;
-    text += `Component Name | Standardized % | Weight for Full Batch\n`;
-    text += `----------------------------------------------------------\n`;
-    fullBatchBreakdownResults.forEach(res => {
-      text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.standardPercentage) ? 'N/A'.padEnd(14) : (res.standardPercentage.toFixed(2) + '%').padEnd(14)} | ${isNaN(res.newRequiredWeight) ? 'N/A' : res.newRequiredWeight.toFixed(3)}\n`;
-    });
-    text += `Sum of Calculated Weights for Full Batch: ${sumOfFullBatchWeights !== null ? sumOfFullBatchWeights.toFixed(3) : 'N/A'}\n`;
+    if (sumOfCalculatedExcessUnits > 0 && parseFloat(desiredTotalBatchWeightForFullBatch) > 0) {
+        text += `Component Breakdown (based on share of calculated excess from Part 1):\n`;
+        text += `Component Name | Share of Excess (%) | Weight for Full Batch\n`;
+        text += `-------------------------------------------------------------\n`;
+        fullBatchBreakdownResults.forEach(res => {
+        // res.standardPercentage now holds (Comp.Excess/TotalExcess)*100
+        text += `${(res.name || '-').padEnd(14)} | ${isNaN(res.standardPercentage) ? 'N/A'.padEnd(19) : (res.standardPercentage.toFixed(2) + '%').padEnd(19)} | ${isNaN(res.newRequiredWeight) ? 'N/A' : res.newRequiredWeight.toFixed(3)}\n`;
+        });
+        text += `Sum of Calculated Weights for Full Batch: ${sumOfFullBatchWeights !== null ? sumOfFullBatchWeights.toFixed(3) : 'N/A'}\n`;
+    } else {
+        text += `Full batch breakdown requires valid excess unit calculations in Part 1 and a desired total batch weight.\n`;
+    }
 
     return text;
   }, [watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, excessAddResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, desiredTotalBatchWeightForFullBatch, fullBatchBreakdownResults, sumOfFullBatchWeights]);
@@ -329,7 +357,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       toast({ title: "Error", description: "Reference Original Total Batch Weight must be a positive number to save.", variant: "destructive" });
       return;
     }
-    // Use original percentages for saving, as these represent the "standard formula"
+    
     const componentsToSave = watchedComponents
         .filter(c => c.name && c.percentageFromTicket && !isNaN(parseFloat(c.percentageFromTicket)))
         .map(c => ({ name: c.name, standardPercentage: parseFloat(c.percentageFromTicket) }));
@@ -342,8 +370,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const newSavedFormula: SavedBatch = {
       id: Date.now().toString(),
       name: formulaName.trim(),
-      originalStandardTotalBatchWeight: refTotalWt, // This is the "reference" total weight for the saved formula percentages
-      components: componentsToSave, // Save original %s
+      originalStandardTotalBatchWeight: refTotalWt, 
+      components: componentsToSave, 
       createdAt: new Date().toISOString(),
     };
 
@@ -357,12 +385,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const formulaToLoad = savedFormulas.find(f => f.id === formulaId);
     if (formulaToLoad) {
       reset({
-        totalExcessUnitsToAdd: '', // Clear dynamic inputs
+        totalExcessUnitsToAdd: '', 
         components: formulaToLoad.components.map(c => ({ name: c.name, percentageFromTicket: String(c.standardPercentage) })),
         saveFormulaName: '',
-        referenceOriginalTotalBatchWeightForSave: String(formulaToLoad.originalStandardTotalBatchWeight), // Load this too
+        referenceOriginalTotalBatchWeightForSave: String(formulaToLoad.originalStandardTotalBatchWeight), 
       });
-      setDesiredTotalBatchWeightForFullBatch(''); // Clear this as well
+      setDesiredTotalBatchWeightForFullBatch(''); 
       setSelectedFormulaToLoad(''); 
       toast({ title: "Formula Loaded", description: `Data for "${formulaToLoad.name}" has been loaded.` });
     }
@@ -526,7 +554,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
             <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Full Batch Component Breakdown</h3>
             <p className="text-sm text-muted-foreground mb-3">
-                This section uses the **Standardized Percentages** calculated in Part 1 to break down a desired total batch weight.
+                This section uses the **share of calculated excess units** from Part 1 to break down a desired total batch weight.
             </p>
             <CommonInput
                 id="desiredTotalBatchWeightForFullBatch"
@@ -539,14 +567,14 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 
             />
 
-            {fullBatchBreakdownResults.length > 0 && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && (
+            {fullBatchBreakdownResults.length > 0 && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && sumOfCalculatedExcessUnits > 0 && (
                 <div className="mt-6 space-y-4">
                     <h3 className="text-lg font-semibold">Calculated Full Batch Breakdown</h3>
                     <Table>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Component Name</TableHead>
-                                <TableHead className="text-right">Standardized % (from Part 1)</TableHead>
+                                <TableHead className="text-right">Share of Excess (%)</TableHead>
                                 <TableHead className="text-right">Weight for Full Batch</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -554,6 +582,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                             {fullBatchBreakdownResults.map((comp, index) => (
                                 <TableRow key={`full_batch_comp_${index}`}>
                                     <TableCell>{comp.name || `Component ${index + 1}`}</TableCell>
+                                    {/* comp.standardPercentage now stores (Comp.Excess/TotalExcess)*100 */}
                                     <TableCell className="text-right">{isNaN(comp.standardPercentage) ? '-' : `${comp.standardPercentage.toFixed(2)}%`}</TableCell>
                                     <TableCell className="text-right font-semibold text-primary">{isNaN(comp.newRequiredWeight) ? '-' : comp.newRequiredWeight.toFixed(3)}</TableCell>
                                 </TableRow>
@@ -563,14 +592,14 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                     <ResultDisplay label="Sum of Calculated Weights for Full Batch" value={sumOfFullBatchWeights} unit="Units" />
                      {sumOfFullBatchWeights !== null && !isNaN(parseFloat(desiredTotalBatchWeightForFullBatch)) && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && Math.abs(parseFloat(desiredTotalBatchWeightForFullBatch) - sumOfFullBatchWeights) > 0.001 && (
                         <p className="text-sm text-orange-500 mt-2">
-                        Note: Sum of calculated weights for full batch ({sumOfFullBatchWeights.toFixed(3)}) does not exactly match the desired total batch weight ({parseFloat(desiredTotalBatchWeightForFullBatch).toFixed(3)}). This can occur due to rounding or if standardized percentages were not fully processed.
+                        Note: Sum of calculated weights for full batch ({sumOfFullBatchWeights.toFixed(3)}) does not exactly match the desired total batch weight ({parseFloat(desiredTotalBatchWeightForFullBatch).toFixed(3)}). This can occur due to rounding.
                         </p>
                     )}
                 </div>
             )}
-            {excessAddResults.length === 0 && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && (
+            { (sumOfCalculatedExcessUnits <= 0 || isNaN(sumOfCalculatedExcessUnits)) && parseFloat(desiredTotalBatchWeightForFullBatch) > 0 && (
                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Define components and their percentages in Part 1 to enable full batch breakdown calculations.
+                    Full batch breakdown requires valid component percentages and a positive "Total Excess Units to Add" in Part 1.
                 </p>
             )}
         </section>
