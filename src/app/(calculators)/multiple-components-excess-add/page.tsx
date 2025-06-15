@@ -7,7 +7,6 @@ import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
 import ResultDisplay from '@/components/calculators/ResultDisplay';
 import { Button } from '@/components/ui/button';
-// Removed Input as it's replaced by Combobox or handled by CommonInput
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Trash2, PlusCircle, Layers, Check, ChevronsUpDown, HelpCircle } from 'lucide-react';
@@ -39,7 +38,7 @@ interface FormData {
 interface MaterialNameComboboxProps {
   value: string;
   onChange: (value: string) => void;
-  materials: Material[]; // Expects the full material object for potential future use, though only name is used now
+  materials: Material[];
   placeholder?: string;
   id?: string;
 }
@@ -49,7 +48,6 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
   const [searchTerm, setSearchTerm] = useState(value || "");
 
   useEffect(() => {
-    // Sync searchTerm if the external value changes (e.g. form reset or programmatic set)
      if (value !== searchTerm) {
         setSearchTerm(value || "");
      }
@@ -63,7 +61,7 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
 
   const handleSearchChange = (newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
-    onChange(newSearchTerm); // Update form value as user types custom name
+    onChange(newSearchTerm); 
   };
   
   const triggerText = value || placeholder || "Select or type name...";
@@ -84,7 +82,7 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[200px] overflow-y-auto">
         <Command
-          filter={(itemValue, search) => { // itemValue is material.name
+          filter={(itemValue, search) => { 
             if (itemValue.toLowerCase().includes(search.toLowerCase())) return 1;
             return 0;
           }}
@@ -100,8 +98,8 @@ const MaterialNameCombobox: React.FC<MaterialNameComboboxProps> = ({ value, onCh
             <CommandGroup>
               {materials.map((material) => (
                 <CommandItem
-                  key={material.name + material.value} // ensure unique key
-                  value={material.name} // This is what CMDK uses for filtering/selection
+                  key={material.name + material.value} 
+                  value={material.name} 
                   onSelect={() => handleSelect(material.name)}
                   className="text-sm"
                 >
@@ -239,21 +237,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
       resultsToCopy={resultsToCopy}
     >
       <form onSubmit={handleSubmit(() => { /* Calculations are real-time */ })} className="space-y-6">
-        <CommonInput
-          id="totalUnitsToAddToBatch"
-          label="Total Units to Add to Batch"
-          unit="Units"
-          {...register('totalUnitsToAddToBatch', { 
-            setValueAs: (v) => v === "" ? "" : parseFloat(v), 
-            validate: value => parseFloat(value) >= 0 || value === "" || "Must be positive or empty"
-          })}
-          placeholder="e.g., 20"
-          tooltipText="The total combined amount of all excess components you intend to add."
-          errorMessage={errors.totalUnitsToAddToBatch?.message}
-        />
-
-        <Separator />
-
         <div>
           <Label className="text-lg font-semibold">Component Percentages from Batch Ticket</Label>
           <p className="text-sm text-muted-foreground mb-3">Enter each component and its percentage as listed on the original batch ticket.</p>
@@ -285,8 +268,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 unit="%"
                 placeholder="e.g., 78.89"
                 {...register(`components.${index}.percentageFromTicket`, { 
-                    setValueAs: (v) => v === "" ? "" : parseFloat(v),
-                    validate: value => parseFloat(value) >= 0 || value === "" || "% must be positive or empty"
+                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v) : ""),
+                    validate: value => value === "" || (typeof value === 'number' && value >= 0) || "% must be positive or empty"
                 })}
                 errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
               />
@@ -306,6 +289,22 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <Separator />
+        
+        <CommonInput
+          id="totalUnitsToAddToBatch"
+          label="Total Units to Add to Batch"
+          unit="Units"
+          {...register('totalUnitsToAddToBatch', { 
+            setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v) : ""),
+            validate: value => value === "" || (typeof value === 'number' && value >= 0) || "Must be positive or empty"
+          })}
+          placeholder="e.g., 20"
+          tooltipText="The total combined amount of all excess components you intend to add."
+          errorMessage={errors.totalUnitsToAddToBatch?.message}
+        />
+
 
         {calculatedResults.length > 0 && (
           <div className="mt-6 space-y-4">
@@ -379,3 +378,5 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
 export default MultipleComponentsExcessAddPage;
         
+
+    
