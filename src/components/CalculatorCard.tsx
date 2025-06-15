@@ -30,6 +30,7 @@ const iconMap: { [key: string]: React.ElementType } = {
 const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const IconComponent = calculator.icon ? iconMap[calculator.icon] || iconMap['DefaultIcon'] : iconMap['DefaultIcon'];
   
+  const [isClient, setIsClient] = useState(false);
   const [iconFloatStyle, setIconFloatStyle] = useState<React.CSSProperties>({});
   const [isIconFloatAnimationActive, setIsIconFloatAnimationActive] = useState(false);
   const [canStartRainbow, setCanStartRainbow] = useState(false);
@@ -44,9 +45,17 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const secondGlitchCheckTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) {
+      return; // Don't run animation setup if not on client yet
+    }
+
     // Icon Float Animation
     const minFloatDelaySec = 25;
-    const maxFloatDelaySec = 900; // Changed from 40 to 900
+    const maxFloatDelaySec = 900;
     const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
     const actualIconFloatDelaySec = Math.random() * floatAnimationDurationVariation + minFloatDelaySec;
 
@@ -102,8 +111,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
       if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
       if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [isClient]); // Animation setup effect now depends on isClient
 
   return (
     <Link href={`/${calculator.slug}`} className="group block" aria-label={`Open ${calculator.name} calculator`}>
@@ -115,8 +123,8 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
                 className={cn(
                   "h-8 w-8 text-primary transition-transform duration-300 ease-in-out",
                   isIconFloatAnimationActive && "animate-icon-float",
-                  canStartRainbow && "animate-rainbow-fade", // This will override text-primary when active
-                  "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none" // Ensure hover still works
+                  canStartRainbow && "animate-rainbow-fade", 
+                  "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none"
                 )}
                 style={iconFloatStyle} 
               />
@@ -124,7 +132,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
           </div>
           <CardTitle 
-            key={`glitch-title-${glitchAnimationCount}`} // Re-mount for re-animation
+            key={`glitch-title-${glitchAnimationCount}`} 
             className={cn(
               "text-lg font-semibold",
               glitchAnimationCount > 0 && shouldAttemptInitialGlitch && 'animate-glitch'
