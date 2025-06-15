@@ -257,7 +257,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
   }, [watchedComponents, watchedTotalExcessUnitsToAdd]);
 
-  // Part 2: Component Value Calculation (Excess Units * AV/OH)
+  // Part 2: Component Value Calculation (Excess Units / AV/OH)
   useEffect(() => {
     const newPart2Results: Part2CalculatedValueComponent[] = [];
     let currentSumOfPart2Values = 0;
@@ -265,10 +265,10 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     excessAddResults.forEach(compFromPart1 => {
       const excessUnits = compFromPart1.unitsToAdd;
-      const avOrOh = compFromPart1.avOrOhValue; // Already parsed in part 1's useEffect
+      const avOrOh = compFromPart1.avOrOhValue;
 
       if (!isNaN(excessUnits) && excessUnits > 0 && !isNaN(avOrOh) && avOrOh !== 0) {
-        const calculatedValue = excessUnits * avOrOh;
+        const calculatedValue = excessUnits / avOrOh; // Corrected: Division
         newPart2Results.push({
           name: compFromPart1.name,
           excessUnits: excessUnits,
@@ -283,17 +283,17 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           avOrOhValue: isNaN(avOrOh) ? NaN : avOrOh,
           calculatedValue: NaN,
         });
-        if (!isNaN(excessUnits) && excessUnits > 0) { // Only consider it invalid for sum if excess units were present but AV/OH was missing/zero
+        if (!isNaN(excessUnits) && excessUnits > 0) {
             allInputsValidForSum = false;
         }
       }
     });
     setPart2Results(newPart2Results);
-    setSumOfPart2CalculatedValues(allInputsValidForSum && currentSumOfPart2Values > 0 ? currentSumOfPart2Values : (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0) ? (allInputsValidForSum ? currentSumOfPart2Values : null) : null) );
+    setSumOfPart2CalculatedValues(allInputsValidForSum && currentSumOfPart2Values !== 0 ? currentSumOfPart2Values : (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0) ? (allInputsValidForSum ? currentSumOfPart2Values : null) : null) );
   }, [excessAddResults]);
 
 
-  const formula = "Part 1 (Excess Add): Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\nPart 2 (Component Value): Calc. Value = Excess Units (from Part 1) * AV/OH of Material.";
+  const formula = "Part 1 (Excess Add): Std. % = (Comp. % / Total Original %) * 100. Excess Units = (Std. % / 100) * Total Excess Units.\nPart 2 (Component Value): Calc. Value = Excess Units (from Part 1) / AV/OH of Material.";
 
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Calculation:\n\n== Part 1: Excess Add Calculation ==\n`;
@@ -312,7 +312,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
     text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
 
-    text += `\n\n== Part 2: Component Value Calculation ==\n`;
+    text += `\n\n== Part 2: Component Value Calculation (Excess Units / AV_OH) ==\n`;
     text += `Component Name | Excess Units | AV/OH | Calculated Value\n`;
     text += `-----------------------------------------------------------\n`;
     part2Results.forEach(res => {
@@ -344,7 +344,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         .filter(c => c.name && c.percentageFromTicket && !isNaN(parseFloat(c.percentageFromTicket)))
         .map(c => ({
             name: c.name,
-            standardPercentage: parseFloat(c.percentageFromTicket),
+            standardPercentage: parseFloat(c.percentageFromTicket), // Save the original input percentage
             avOrOhValue: c.avOrOhValue && !isNaN(parseFloat(c.avOrOhValue)) ? parseFloat(c.avOrOhValue) : undefined
         }));
 
@@ -363,7 +363,6 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
     setSavedFormulas([...savedFormulas, newSavedFormula]);
     setValue('saveFormulaName', '');
-    // setValue('referenceOriginalTotalBatchWeightForSave', ''); // Keep this as user might be saving variations
     toast({ title: "Success", description: `Formula "${newSavedFormula.name}" saved.` });
   };
 
@@ -371,7 +370,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     const formulaToLoad = savedFormulas.find(f => f.id === formulaId);
     if (formulaToLoad) {
       reset({
-        totalExcessUnitsToAdd: '', // Clear excess units on load
+        totalExcessUnitsToAdd: '', 
         components: formulaToLoad.components.map(c => ({
              name: c.name,
              percentageFromTicket: String(c.standardPercentage),
@@ -394,7 +393,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   return (
     <CalculatorWrapper
       title="Multiple Components Calculator"
-      description="Part 1: Standardize component percentages for excess add. Part 2: Calculate component values based on excess units and AV/OH."
+      description="Part 1: Standardize component percentages for excess add. Part 2: Calculate values based on excess units and AV/OH."
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
@@ -422,7 +421,9 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                             placeholder={`Component ${index + 1}`}
                             onMaterialSelect={(material) => {
                                 if (material) {
-                                    setValue(`components.${index}.avOrOhValue`, material.value.toString(), { shouldValidate: true });
+                                    setValue(`components.${index}.avOrOhValue`, material.value.toString(), { shouldValidate: true, shouldDirty: true });
+                                } else {
+                                     // If custom name, don't clear AV/OH if user might be typing it
                                 }
                             }}
                             />
@@ -451,7 +452,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                         placeholder="e.g., 389"
                         tooltipText="Acid Value or Hydroxyl Value of this material. Used in Part 2. Pre-fills if material is selected."
                         {...register(`components.${index}.avOrOhValue`, {
-                            setValueAs: (v) => v === "" ? "" : (parseFloat(v) !== 0 ? parseFloat(v).toString() : "0"), // Allow 0 but !==0 for calc
+                            setValueAs: (v) => v === "" ? "" : (parseFloat(v).toString()), // Allow any number, including 0
                             validate: value => value === "" || (!isNaN(parseFloat(value))) || "Must be a number or empty"
                         })}
                         errorMessage={errors.components?.[index]?.avOrOhValue?.message}
@@ -557,11 +558,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
         <Separator />
 
-        {/* Part 2: Component Value Calculation (Excess Units * AV/OH) */}
+        {/* Part 2: Component Value Calculation (Excess Units / AV/OH) */}
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
           <h3 className="text-xl font-semibold mb-3 text-primary">Part 2: Component Value Calculation</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            This section uses the "Excess Units to Add" calculated in Part 1 and multiplies them by the AV/OH value you entered for each component.
+            This section uses the "Excess Units to Add" calculated in Part 1 and divides them by the AV/OH value you entered for each component.
           </p>
           {part2Results.length > 0 && (
             <div className="mt-6 space-y-4">
@@ -616,7 +617,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
               </div>
               {part2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits > 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter a non-zero AV/OH value for components with excess units to see Part 2 calculations.
+                    Enter a non-zero AV/OH value for components with excess units to see Part 2 calculations. Division by zero is not performed.
                 </p>
               )}
             </div>
@@ -624,6 +625,11 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
           {part2Results.length === 0 && excessAddResults.length > 0 && (
              <p className="text-sm text-muted-foreground">
                 Enter "Total Excess Units to Add" in Part 1 and AV/OH values for components to see Part 2 calculations.
+            </p>
+          )}
+           {excessAddResults.every(comp => isNaN(comp.unitsToAdd) || comp.unitsToAdd <= 0) && watchedTotalExcessUnitsToAdd && parseFloat(watchedTotalExcessUnitsToAdd) > 0 && (
+             <p className="text-sm text-muted-foreground">
+                Enter component percentages in Part 1 to calculate excess units, which are then used for Part 2 calculations.
             </p>
           )}
         </section>
@@ -732,5 +738,3 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
-
-    
