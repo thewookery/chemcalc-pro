@@ -342,12 +342,12 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
   }, [excessAddResults, part2Results]);
 
 
-  const formula = `1. Std. % = (Comp. % / Total Orig. %) * 100.\n2. Excess Units = (Std. % / 100) * Total Excess Units.\n3. % of Add = (Excess Units / AV_OH) * 100.\n4. # to Add (for Target Wt.) = (% of Add / 100) * Target Batch Wt.`;
+  const formula = `1. Std. % = (Comp. % / Total Orig. %) * 100.\n2. Excess Units = (Std. % / 100) * Total Excess Units.\n3. % of Add = (Excess Units / AV_OH) * 100.\n4. # to Add (Target Wt.) = (% of Add / 100) * Target Batch Wt.`;
 
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Calculation:\n\n`;
-    text += `Target Batch Weight: ${watchedTargetBatchWeight}\n`;
-    text += `Total Excess Units to Add to Batch: ${watchedTotalExcessUnitsToAdd}\n\n`;
+    text += `Batch Weight: ${watchedTargetBatchWeight}\n`;
+    text += `Total Excess Units to Add: ${watchedTotalExcessUnitsToAdd}\n\n`;
     text += `Components (Original % from Batch Ticket & AV/OH):\n`;
     watchedComponents.forEach((comp, index) => {
       text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}% (AV/OH: ${comp.avOrOhValue || 'N/A'})\n`;
@@ -355,8 +355,8 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     text += `Total Original % from Batch Ticket: ${totalOriginalPercentage.toFixed(2)}%\n\n`;
 
     text += `Calculated Breakdown:\n`;
-    text += `Comp. Name | Orig. % | AV/OH | Std. % | Excess Units | % of Add | # to Add (Target Wt.)\n`;
-    text += `--------------------------------------------------------------------------------------------\n`;
+    text += `Comp. Name | Orig. % | AV/OH | Std. % | Excess Units | % of Add | # to Add (Batch Wt.)\n`;
+    text += `-------------------------------------------------------------------------------------------\n`;
     displayResults.forEach(res => {
       text += `${(res.name || '-').padEnd(12)} | `
       text += `${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(7) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(7)} | `
@@ -368,7 +368,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
     });
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
     text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
-    text += `Sum of '# to add (for Target Wt.)' Values: ${sumOfUnitsForTargetBatchWeight !== null && !isNaN(sumOfUnitsForTargetBatchWeight) ? sumOfUnitsForTargetBatchWeight.toFixed(3) : 'N/A'}\n`;
+    text += `Sum of '# to add (Batch Wt.)' Values: ${sumOfUnitsForTargetBatchWeight !== null && !isNaN(sumOfUnitsForTargetBatchWeight) ? sumOfUnitsForTargetBatchWeight.toFixed(3) : 'N/A'}\n`;
 
     return text;
   }, [watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, displayResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, sumOfUnitsForTargetBatchWeight]);
@@ -528,7 +528,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <CommonInput
                 id="targetBatchWeight"
-                label="Target Batch Weight (for Final Calculation)"
+                label="Batch Weight"
                 unit="Units"
                 {...register('targetBatchWeight', {
                     setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
@@ -568,7 +568,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 <TableHead className="text-right">Std. %</TableHead>
                 <TableHead className="text-right">Excess Units</TableHead>
                 <TableHead className="text-right">% of Add</TableHead>
-                <TableHead className="text-right"># to Add (Target Wt.)</TableHead>
+                <TableHead className="text-right"># to Add (Batch Wt.)</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -589,7 +589,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t">
                 <ResultDisplay label="Sum of Standardized %" value={sumOfStandardizedPercentage} unit="%" />
                 <ResultDisplay label="Sum of Calculated Excess Units" value={sumOfCalculatedExcessUnits} unit="Units" />
-                <ResultDisplay label="Sum of '# to Add (Target Wt.)'" value={sumOfUnitsForTargetBatchWeight} unit="Units" variant="highlight"/>
+                <ResultDisplay label="Sum of '# to Add (Batch Wt.)'" value={sumOfUnitsForTargetBatchWeight} unit="Units" variant="highlight"/>
             </div>
             {/* Warning Messages */}
             { Math.abs(parseFloat(watchedTotalExcessUnitsToAdd) - sumOfCalculatedExcessUnits) > 0.001 && !isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) && sumOfCalculatedExcessUnits > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
@@ -609,7 +609,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
             )}
             {displayResults.some(r => !isNaN(r.percentageOfAdd) && (isNaN(parseFloat(watchedTargetBatchWeight)) || parseFloat(watchedTargetBatchWeight) <= 0)) && (
                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter a valid Target Batch Weight to calculate final '# to add' values.
+                    Enter a valid Batch Weight to calculate final '# to add' values.
                 </p>
             )}
         </section>
