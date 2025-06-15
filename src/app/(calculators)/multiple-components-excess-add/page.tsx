@@ -661,9 +661,18 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 <h4 className="font-semibold text-md mb-2">1. Component Details</h4>
                 <p className="mb-1">First, define each raw material (component) for your batch:</p>
                 <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Name:</strong> Identify the material. You can select from a predefined list (which may auto-fill AV/OH) or type a custom name.</li>
-                  <li><strong>Batch Ticket %:</strong> Enter the percentage of this component as it appears on your standard/original batch manufacturing ticket. This is crucial for proportionally distributing "Total Excess Units to Add".</li>
-                  <li><strong>AV/OH Value:</strong> Enter the Acid Value (AV) or Hydroxyl Value (OH) of the material. This will auto-populate if a known material is selected for "Name", but you can override it. This value is essential for calculating the "% of Add".</li>
+                  <li>
+                    <strong>Name:</strong> Identify the material. Select from a list or type a custom name.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">2-Ethylhexanoic Acid</span></div>
+                  </li>
+                  <li>
+                    <strong>Batch Ticket %:</strong> Enter the component's percentage from your standard batch ticket.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">78.89 %</span></div>
+                  </li>
+                  <li>
+                    <strong>AV/OH Value:</strong> Acid Value or Hydroxyl Value. Auto-fills for known materials.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">389</span></div>
+                  </li>
                 </ul>
                 <p className="mt-2 text-muted-foreground">Use the <span className="inline-flex items-center"><PlusCircle className="h-3 w-3 mr-1"/> Add Component</span> button to add more rows, or the <Trash2 className="inline-block h-3 w-3"/> icon to remove a component.</p>
                 <p className="mt-1 text-muted-foreground">The "Total Original % from Ticket" (displayed below components) sums all "Batch Ticket %" entries. If this total isn't 100%, the calculator standardizes percentages for internal calculations.</p>
@@ -673,8 +682,14 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 <h4 className="font-semibold text-md mb-2">2. Overall Batch Parameters</h4>
                  <p className="mb-1">Next, specify the overall targets for your batch:</p>
                 <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Batch Weight:</strong> Enter the desired total weight for your final batch. The "# to Add (Batch Wt.)" for each component will be based on this value.</li>
-                  <li><strong>Total Excess Units to Add:</strong> Specify the total combined amount of *all excess components* you intend to add. This total is proportionally distributed among the components based on their standardized percentages from the "Batch Ticket %" inputs.</li>
+                  <li>
+                    <strong>Batch Weight:</strong> Desired total weight for your final batch.
+                     <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 Units</span></div>
+                  </li>
+                  <li>
+                    <strong>Total Excess Units to Add:</strong> Total combined amount of *all excess components*.
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">20 Units</span></div>
+                  </li>
                 </ul>
               </section>
 
@@ -708,9 +723,15 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 
               <section>
                 <h4 className="font-semibold text-md mb-2">5. Saving and Loading Formulas</h4>
-                <p className="text-muted-foreground">
+                <p className="mb-1 text-muted-foreground">
                   You can save your current "Component Details" (Name, Batch Ticket %, AV/OH Value) along with a "Reference Original Total Batch Weight" for quick reuse. This is useful for standard product formulas. Use the fields in the "Manage Saved Formulas" section to save or load a configuration.
                 </p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Formula Name to Save:</strong>
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">Product XYZ Standard</span></div></li>
+                  <li><strong>Reference Original Total Batch Weight for Saved Formula:</strong>
+                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">100000 lbs</span></div></li>
+                </ul>
               </section>
             </div>
             <DialogFooter>
