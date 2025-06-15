@@ -99,7 +99,7 @@ export default {
           '100%': { transform: 'translateY(0px)', opacity: '1' },
         },
         iconFloat: {
-          '0%, 100%': { transform: 'translate(0, 0) rotate(0deg)' },
+          '0%': { transform: 'translate(0, 0) rotate(0deg)' },
           '12.5%': { transform: 'translate(3px, -4px) rotate(-3deg)' },
           '25%': { transform: 'translate(0px, -6px) rotate(0deg)' },
           '37.5%': { transform: 'translate(-3px, -4px) rotate(3deg)' },
@@ -107,7 +107,16 @@ export default {
           '62.5%': { transform: 'translate(-3px, 4px) rotate(-3deg)' },
           '75%': { transform: 'translate(0px, 6px) rotate(0deg)' },
           '87.5%': { transform: 'translate(3px, 4px) rotate(3deg)' },
+          '100%': { transform: 'translate(0, 0) rotate(0deg)' },
         },
+        rainbowFade: {
+          '0%, 100%': { color: 'hsl(0, 100%, 60%)' },   /* Red */
+          '16%': { color: 'hsl(45, 100%, 60%)' },     /* Orange */
+          '32%': { color: 'hsl(60, 100%, 60%)' },     /* Yellow */
+          '48%': { color: 'hsl(120, 100%, 60%)' },    /* Green */
+          '64%': { color: 'hsl(240, 100%, 60%)' },    /* Blue */
+          '80%': { color: 'hsl(280, 100%, 60%)' },    /* Purple */
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -115,6 +124,7 @@ export default {
         fadeIn: 'fadeIn 0.5s ease-in-out',
         slideUp: 'slideUp 0.5s ease-in-out',
         'icon-float': 'iconFloat 100s infinite ease-in-out',
+        'rainbow-fade': 'rainbowFade 15s infinite linear',
       },
     },
   },

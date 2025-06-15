@@ -29,13 +29,26 @@ const iconMap: { [key: string]: React.ElementType } = {
 
 const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
   const IconComponent = calculator.icon ? iconMap[calculator.icon] || iconMap['HelpCircle'] : iconMap['HelpCircle'];
-  const [iconAnimationStyle, setIconAnimationStyle] = useState<React.CSSProperties>({});
+  const [iconFloatStyle, setIconFloatStyle] = useState<React.CSSProperties>({});
+  const [canStartRainbow, setCanStartRainbow] = useState(false);
 
   useEffect(() => {
-    const randomBaseDelay = Math.random() * 15; 
-    const finalDelay = 25 + randomBaseDelay; 
-    setIconAnimationStyle({ animationDelay: `${finalDelay.toFixed(2)}s` });
-  }, []);
+    const minDelay = 25; // seconds
+    const maxDelay = 40; // seconds
+    const randomFloatDelaySec = Math.random() * (maxDelay - minDelay) + minDelay;
+    
+    setIconFloatStyle({ animationDelay: `${randomFloatDelaySec.toFixed(2)}s` });
+
+    // Schedule rainbow fade to start 20 seconds after the float animation begins
+    const rainbowStartDelayMs = (randomFloatDelaySec + 20) * 1000;
+    const rainbowTimerId = setTimeout(() => {
+      setCanStartRainbow(true);
+    }, rainbowStartDelayMs);
+
+    return () => {
+      clearTimeout(rainbowTimerId); // Cleanup timer on unmount
+    };
+  }, []); // Empty dependency array, runs once on mount
 
   return (
     <Link href={`/${calculator.slug}`} className="group block" aria-label={`Open ${calculator.name} calculator`}>
@@ -45,10 +58,12 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
             {IconComponent && (
               <IconComponent
                 className={cn(
-                  "h-8 w-8 text-primary transition-transform duration-300 ease-in-out animate-icon-float",
-                  "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none"
+                  "h-8 w-8 transition-transform duration-300 ease-in-out animate-icon-float",
+                  !canStartRainbow && "text-primary", // Apply primary color only before rainbow starts
+                  "group-hover:scale-110 group-hover:rotate-3 group-hover:animate-none",
+                  canStartRainbow && "animate-rainbow-fade" // Conditionally apply rainbow animation
                 )}
-                style={iconAnimationStyle} 
+                style={iconFloatStyle} 
               />
             )}
             <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1 group-hover:text-primary" />
@@ -62,4 +77,3 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 };
 
 export default CalculatorCard;
-
