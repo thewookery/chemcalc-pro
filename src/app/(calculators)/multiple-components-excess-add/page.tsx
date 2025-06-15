@@ -9,7 +9,7 @@ import ResultDisplay from '@/components/calculators/ResultDisplay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle } from 'lucide-react';
+import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle, HelpCircle } from 'lucide-react';
 import type { BatchTicketComponentInput, CalculatedExcessComponent, Part2CalculatedValueComponent, SavedBatch } from '@/types';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -46,6 +46,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 const SAVED_BATCHES_KEY = 'chemcalc_savedFormulas_excessAndFull_v1';
 
@@ -563,7 +572,7 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
                 <div className="flex-1">Component Name</div>
                 <div className="w-1/3 md:w-1/4 text-right">% of Add</div>
                 <div className="w-1/3 md:w-1/4 text-right"># to Add (Batch Wt.)</div>
-                <div className="w-10 md:w-12 text-center"> </div> 
+                <div className="w-10 md:w-12 text-center"> </div> {/* For accordion arrow */}
             </div>
             <Accordion type="single" collapsible className="w-full space-y-1">
               {displayResults.map((comp, index) => (
@@ -631,6 +640,85 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
         </section>
         )}
       </form>
+
+      <div className="mt-8 pt-6 border-t">
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full md:w-auto">
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl">How to Use the Multiple Components Calculator</DialogTitle>
+              <DialogDescription>
+                This calculator helps you define components, calculate excess additions, and determine full batch component weights.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 text-sm py-4">
+              <section>
+                <h4 className="font-semibold text-md mb-2">1. Component Details</h4>
+                <p className="mb-1">First, define each raw material (component) for your batch:</p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Name:</strong> Identify the material. You can select from a predefined list (which may auto-fill AV/OH) or type a custom name.</li>
+                  <li><strong>Batch Ticket %:</strong> Enter the percentage of this component as it appears on your standard/original batch manufacturing ticket. This is crucial for proportionally distributing "Total Excess Units to Add".</li>
+                  <li><strong>AV/OH Value:</strong> Enter the Acid Value (AV) or Hydroxyl Value (OH) of the material. This will auto-populate if a known material is selected for "Name", but you can override it. This value is essential for calculating the "% of Add".</li>
+                </ul>
+                <p className="mt-2 text-muted-foreground">Use the <span className="inline-flex items-center"><PlusCircle className="h-3 w-3 mr-1"/> Add Component</span> button to add more rows, or the <Trash2 className="inline-block h-3 w-3"/> icon to remove a component.</p>
+                <p className="mt-1 text-muted-foreground">The "Total Original % from Ticket" (displayed below components) sums all "Batch Ticket %" entries. If this total isn't 100%, the calculator standardizes percentages for internal calculations.</p>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-md mb-2">2. Overall Batch Parameters</h4>
+                 <p className="mb-1">Next, specify the overall targets for your batch:</p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Batch Weight:</strong> Enter the desired total weight for your final batch. The "# to Add (Batch Wt.)" for each component will be based on this value.</li>
+                  <li><strong>Total Excess Units to Add:</strong> Specify the total combined amount of *all excess components* you intend to add. This total is proportionally distributed among the components based on their standardized percentages from the "Batch Ticket %" inputs.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-md mb-2">3. Calculated Results</h4>
+                <p className="mb-1 text-muted-foreground">This section shows the calculated breakdown for each component. Click on a component row to expand and see more details.</p>
+                <p className="font-medium mt-2">Displayed by Default in each row:</p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Component Name:</strong> As entered.</li>
+                  <li><strong>% of Add:</strong> Calculated as: <code>(Excess Units / AV_OH Value) * 100</code>. This is the percentage of this specific component needed, relative to its own AV/OH value, based on its share of the "Total Excess Units to Add".</li>
+                  <li><strong># to Add (Batch Wt.):</strong> Calculated as: <code>(% of Add / 100) * Batch Weight</code>. This is the actual amount of this component to add to achieve your target "Batch Weight".</li>
+                </ul>
+                 <p className="font-medium mt-2">Details inside Accordion (Click to Expand):</p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Original %:</strong> The "Batch Ticket %" you entered.</li>
+                  <li><strong>AV/OH:</strong> The AV/OH value for that component.</li>
+                  <li><strong>Std. % (Standardized Percentage):</strong> Calculated as: <code>(Component's Batch Ticket % / Total Original % from Ticket) * 100</code>. This normalizes component percentages to sum to 100% for proportional calculations.</li>
+                  <li><strong>Excess Units:</strong> Calculated as: <code>(Standardized % / 100) * Total Excess Units to Add</code>. This is the portion of the "Total Excess Units to Add" allocated to this specific component.</li>
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-md mb-2">4. Summary Statistics</h4>
+                <p className="mb-1 text-muted-foreground">These values appear below the main results table:</p>
+                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
+                  <li><strong>Sum of Standardized %:</strong> This should ideally be 100%. The color indicates if it's 100% (green) or not (red). If not 100%, it means your original "Batch Ticket %" entries didn't sum to 100, but the calculator uses these standardized values for subsequent calculations.</li>
+                  <li><strong>Sum of Calculated Excess Units:</strong> This should ideally match your "Total Excess Units to Add" input. Minor differences can occur due to rounding.</li>
+                  <li><strong>Sum of '# to Add (Batch Wt.)':</strong> This is the sum of the final amounts for each component. This value represents the total material weight calculated from the "% of Add" values and your target "Batch Weight".</li>
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="font-semibold text-md mb-2">5. Saving and Loading Formulas</h4>
+                <p className="text-muted-foreground">
+                  You can save your current "Component Details" (Name, Batch Ticket %, AV/OH Value) along with a "Reference Original Total Batch Weight" for quick reuse. This is useful for standard product formulas. Use the fields in the "Manage Saved Formulas" section to save or load a configuration.
+                </p>
+              </section>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => (document.querySelector('[cmdk-dialog-content] [aria-label="Close"]') as HTMLElement)?.click()}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+      
 
       <div className="mt-8 pt-6 border-t">
         <h3 className="text-lg font-medium mb-3">Manage Saved Formulas</h3>
@@ -734,3 +822,4 @@ const MultipleComponentsExcessAddPage: React.FC = () => {
 };
 
 export default MultipleComponentsExcessAddPage;
+
