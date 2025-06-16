@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { CalculatorMeta } from '@/types';
-import { ArrowRight, Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers, TestTube2, HelpCircle as DefaultIcon } from 'lucide-react'; // Removed Grain, ensured TestTube2 is present
+import { ArrowRight, Beaker, Percent, FlaskConical, Thermometer, Contrast, Sigma, Weight, Scaling, Pipette, FilePlus, Layers, TestTube2, ScanText, HelpCircle as DefaultIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -24,7 +24,8 @@ const iconMap: { [key: string]: React.ElementType } = {
   Pipette,
   FilePlus,
   Layers,
-  TestTube2, // Ensured TestTube2 is here
+  TestTube2,
+  ScanText, // Added ScanText
   DefaultIcon,
 };
 
@@ -51,10 +52,10 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
 
   useEffect(() => {
     if (!isClient) {
-      return; // Don't run animation setup if not on client yet
+      return; 
     }
 
-    // Icon Float Animation
+    
     const minFloatDelaySec = 25;
     const maxFloatDelaySec = 900;
     const floatAnimationDurationVariation = maxFloatDelaySec - minFloatDelaySec;
@@ -79,7 +80,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
     }, actualIconFloatDelaySec * 1000);
 
 
-    // Glitch Animation Logic
+    
     const initialGlitchProbability = 1 / 25; 
     const attemptThisGlitch = Math.random() < initialGlitchProbability;
     setShouldAttemptInitialGlitch(attemptThisGlitch);
@@ -112,7 +113,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({ calculator }) => {
       if (firstGlitchTimerRef.current) clearTimeout(firstGlitchTimerRef.current);
       if (secondGlitchCheckTimerRef.current) clearTimeout(secondGlitchCheckTimerRef.current);
     };
-  }, [isClient]); // Animation setup effect now depends on isClient
+  }, [isClient]); 
 
   return (
     <Link href={`/${calculator.slug}`} className="group block" aria-label={`Open ${calculator.name} calculator`}>
