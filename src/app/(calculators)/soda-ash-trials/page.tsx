@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -24,14 +23,13 @@ const SodaAshTrialsCalculatorPage: React.FC = () => {
   const [sodaAshAmount, setSodaAshAmount] = useState<number | null>(null);
   const [isMinimumApplied, setIsMinimumApplied] = useState<boolean>(false);
 
-  const MINIMUM_ADD_AMOUNT = 500; // This value remains as a numeric threshold
+  const MINIMUM_ADD_AMOUNT = 500;
 
   useEffect(() => {
     const av = parseFloat(acidValue);
     const wt = parseFloat(batchWeight);
 
     if (!isNaN(av) && !isNaN(wt) && wt > 0 && av >= 0) {
-      // Calculation: (5 * AV * BatchWeight) / 159
       const calculatedAmount = (5 * av * wt) / 159;
       if (calculatedAmount < MINIMUM_ADD_AMOUNT) {
         setSodaAshAmount(MINIMUM_ADD_AMOUNT);
@@ -47,27 +45,30 @@ const SodaAshTrialsCalculatorPage: React.FC = () => {
   }, [acidValue, batchWeight]);
 
   const formula = `Soda Ash Amount (lbs) = ((5 * AV) / 159) * Batch Weight (lbs)`;
-  const formulaTooltip = `AV: Acid Value. If the calculated amount is less than ${MINIMUM_ADD_AMOUNT} lbs, the amount defaults to ${MINIMUM_ADD_AMOUNT} lbs. The calculation is (5 times Acid Value, divided by 159, then multiplied by Batch Weight).`;
-
   const resultsToCopy = useMemo(() => {
     if (sodaAshAmount === null) return "";
-    let text = `Soda Ash Trials Calculation:
-Acid Value (AV): ${acidValue}
-Batch Weight: ${batchWeight} lbs
-Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
+    let text = `Soda Ash Trials Calculation:\nAcid Value (AV): ${acidValue}\nBatch Weight: ${batchWeight} lbs\nCalculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
     if (isMinimumApplied) {
       text += `\n(Note: Minimum add amount of ${MINIMUM_ADD_AMOUNT} lbs applied)`;
     }
     return text;
   }, [acidValue, batchWeight, sodaAshAmount, isMinimumApplied]);
 
+  const voiceConfig = [
+    { id: 'acidValue', label: 'Acid Value', onUpdate: (val: string) => setAcidValue(val) },
+    { id: 'batchWeightSodaAsh', label: 'Batch Weight', onUpdate: (val: string) => setBatchWeight(val) },
+  ];
+
+  const voiceResultText = sodaAshAmount !== null ? `The soda ash amount is ${sodaAshAmount.toFixed(2)} pounds.` : undefined;
+
   return (
     <CalculatorWrapper
       title="Soda Ash Trials Calculator"
-      description={`Calculate the amount of soda ash needed for trials based on Acid Value and Batch Weight. A minimum add of ${MINIMUM_ADD_AMOUNT} pounds applies.`}
+      description={`Calculate the amount of soda ash needed for trials. A minimum add of ${MINIMUM_ADD_AMOUNT} lbs applies.`}
       formula={formula}
-      formulaTooltip={formulaTooltip}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -76,7 +77,6 @@ Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
           value={acidValue}
           onChange={(e) => setAcidValue(e.target.value)}
           placeholder="e.g., 10.0"
-          tooltipText="Enter the Acid Value of the sample."
         />
         <CommonInput
           id="batchWeightSodaAsh"
@@ -85,13 +85,12 @@ Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
           value={batchWeight}
           onChange={(e) => setBatchWeight(e.target.value)}
           placeholder="e.g., 1000"
-          tooltipText="Enter the total weight of the trial batch in pounds (lbs)."
         />
         <ResultDisplay label="Soda Ash Add Amount" value={sodaAshAmount} unit="lbs" variant="highlight" />
         {isMinimumApplied && (
           <div className="flex items-center p-3 text-sm text-orange-700 bg-orange-100 border border-orange-300 rounded-md dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-500/50">
             <AlertTriangle className="mr-2 h-4 w-4" />
-            <span>Note: Minimum add amount of {MINIMUM_ADD_AMOUNT} lbs has been applied.</span>
+            <span>Note: Minimum add amount of {MINIMUM_ADD_AMOUNT} lbs applied.</span>
           </div>
         )}
       </div>
@@ -99,48 +98,16 @@ Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="w-full md:w-auto">
-              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use voice
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-xl">How to Use the Soda Ash Trials Calculator</DialogTitle>
+              <DialogTitle>Voice Control</DialogTitle>
               <DialogDescription>
-                This calculator determines the amount of soda ash to add for trials based on the sample's Acid Value (AV) and the desired batch weight in pounds.
+                Click the mic and say: "Set acid value to twelve" or "Read the result".
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 text-sm py-4">
-              <section>
-                <h4 className="font-semibold text-md mb-2">1. Input Acid Value (AV)</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the Acid Value (AV) of the substance you are working with.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">10.0</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">2. Input Batch Weight</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the total weight of your trial batch in pounds (lbs). The "Soda Ash Add Amount" will also be in pounds.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 lbs</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">3. Understanding the Result</h4>
-                <p className="mb-1 text-muted-foreground">
-                  The calculator will display the "Soda Ash Add Amount" in pounds (lbs). The formula used is:
-                </p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono whitespace-pre-wrap">{formula}</code>
-                <p className="font-semibold mt-2">Minimum Add Rule:</p>
-                <p className="text-muted-foreground">
-                  If the calculated soda ash amount is less than {MINIMUM_ADD_AMOUNT} lbs, the calculator will automatically set the "Soda Ash Add Amount" to {MINIMUM_ADD_AMOUNT} lbs. A notification will appear if this minimum is applied.
-                </p>
-              </section>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button">Close</Button>
-              </DialogClose>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
@@ -149,5 +116,3 @@ Calculated Soda Ash Add Amount: ${sodaAshAmount.toFixed(3)} lbs`;
 };
 
 export default SodaAshTrialsCalculatorPage;
-
-    

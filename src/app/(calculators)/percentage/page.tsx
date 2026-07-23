@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -59,14 +58,26 @@ const PercentageCalculatorPage: React.FC = () => {
 
   const resultsToCopy = useMemo(() => {
     if (mode === "percentOfValue" && a1 !== null) {
-      return `Percentage of Value:
-${b1}% of ${c1} = ${a1.toFixed(3)}`;
+      return `Percentage of Value:\n${b1}% of ${c1} = ${a1.toFixed(3)}`;
     } else if (mode === "whatPercent" && percent2 !== null) {
-      return `What Percent:
-${a2} is ${percent2.toFixed(3)}% of ${b2}`;
+      return `What Percent:\n${a2} is ${percent2.toFixed(3)}% of ${b2}`;
     }
     return "";
   }, [mode, a1, b1, c1, percent2, a2, b2]);
+
+  const voiceConfig = mode === "percentOfValue" 
+    ? [
+        { id: 'percentageB1', label: 'Percentage', onUpdate: (val: string) => setB1(val) },
+        { id: 'valueC1', label: 'Total Value', onUpdate: (val: string) => setC1(val) },
+      ]
+    : [
+        { id: 'valueA2', label: 'Partial Value', onUpdate: (val: string) => setA2(val) },
+        { id: 'totalValueB2', label: 'Total Value', onUpdate: (val: string) => setB2(val) },
+      ];
+
+  const voiceResultText = mode === "percentOfValue"
+    ? (a1 !== null ? `The result is ${a1.toFixed(3)}` : undefined)
+    : (percent2 !== null ? `The percentage is ${percent2.toFixed(3)}%` : undefined);
 
   return (
     <CalculatorWrapper
@@ -74,6 +85,8 @@ ${a2} is ${percent2.toFixed(3)}% of ${b2}`;
       description="Calculate percentages in two different modes."
       formula={mode === "percentOfValue" ? formulaMode1 : formulaMode2}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <Tabs value={mode} onValueChange={(value) => setMode(value as PercentageMode)} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -129,48 +142,17 @@ ${a2} is ${percent2.toFixed(3)}% of ${b2}`;
             <DialogHeader>
               <DialogTitle className="text-xl">How to Use the Percentage Calculator</DialogTitle>
               <DialogDescription>
-                This calculator offers two modes for common percentage calculations.
+                Use the mic icon to enter values or read the answer.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
               <section>
-                <h4 className="font-semibold text-md mb-2">Mode 1: Find % of a Value</h4>
-                <p className="mb-1 text-muted-foreground">
-                  This mode helps you find what a certain percentage (B) of a given total value (C) is. The result is Value A.
-                </p>
-                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li>
-                    <strong>Percentage (B):</strong> Enter the percentage you want to find.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">25 %</span></div>
-                  </li>
-                  <li>
-                    <strong>Total Value (C):</strong> Enter the total amount from which the percentage will be calculated.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">200</span></div>
-                  </li>
+                <h4 className="font-semibold text-md mb-2">Voice Commands</h4>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li>"Set percentage to fifty"</li>
+                  <li>"Total value is five hundred"</li>
+                  <li>"Read the result"</li>
                 </ul>
-                <p className="mt-1 text-muted-foreground">
-                  The calculator will show the "Result (A)". The formula is: <code className="font-mono bg-muted px-1 rounded">{formulaMode1}</code>
-                </p>
-              </section>
-              <hr className="my-4"/>
-              <section>
-                <h4 className="font-semibold text-md mb-2">Mode 2: What % is A of B</h4>
-                <p className="mb-1 text-muted-foreground">
-                  This mode helps you find what percentage a certain value (A) is of a total value (B).
-                </p>
-                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li>
-                    <strong>Value (A):</strong> Enter the partial value.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">50</span></div>
-                  </li>
-                  <li>
-                    <strong>Total Value (B):</strong> Enter the total amount that Value A is part of.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">200</span></div>
-                  </li>
-                </ul>
-                <p className="mt-1 text-muted-foreground">
-                  The calculator will show the "Percentage". The formula is: <code className="font-mono bg-muted px-1 rounded">{formulaMode2}</code>
-                </p>
               </section>
             </div>
             <DialogFooter>

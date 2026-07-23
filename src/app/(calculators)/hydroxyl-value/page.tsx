@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -22,14 +21,14 @@ const HydroxylValueCalculatorPage: React.FC = () => {
   const [blank, setBlank] = useState<string>('');
   const [sample, setSample] = useState<string>('');
   const [weight, setWeight] = useState<string>('');
-  const [acidValue, setAcidValue] = useState<string>(''); // AV is an input here
+  const [acidValue, setAcidValue] = useState<string>('');
   const [hydroxylValue, setHydroxylValue] = useState<number | null>(null);
 
   useEffect(() => {
     const b = parseFloat(blank);
     const s = parseFloat(sample);
     const wt = parseFloat(weight);
-    const av = parseFloat(acidValue); // AV input
+    const av = parseFloat(acidValue);
 
     if (!isNaN(b) && !isNaN(s) && !isNaN(wt) && !isNaN(av) && wt > 0) {
       const ohIntermediate = ((b - s) * 0.5 * 56.11) / wt;
@@ -41,8 +40,6 @@ const HydroxylValueCalculatorPage: React.FC = () => {
   }, [blank, sample, weight, acidValue]);
 
   const formula = "OH Value = (((Blank - Sample) * 0.5 * 56.11) / Weight) + Acid Value";
-  const formulaTooltip = "This formula calculates the Hydroxyl Value. It first determines an intermediate value based on titration volumes (Blank, Sample), sample weight, and a constant (0.5 * 56.11, where 0.5 is often titrant normality and 56.11 is MW of KOH). The sample's Acid Value (AV) is then added to this intermediate value.";
-
   const resultsToCopy = useMemo(() => {
     if (hydroxylValue === null) return "";
     return `Hydroxyl Value Calculation:
@@ -52,14 +49,24 @@ Sample Weight: ${weight} g
 Acid Value (AV): ${acidValue} mg KOH/g
 Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
   }, [blank, sample, weight, acidValue, hydroxylValue]);
+
+  const voiceConfig = [
+    { id: 'blank', label: 'Blank Titration', onUpdate: (val: string) => setBlank(val) },
+    { id: 'sample', label: 'Sample Titration', onUpdate: (val: string) => setSample(val) },
+    { id: 'weight', label: 'Sample Weight', onUpdate: (val: string) => setWeight(val) },
+    { id: 'acidValue', label: 'Acid Value', onUpdate: (val: string) => setAcidValue(val) },
+  ];
+
+  const voiceResultText = hydroxylValue !== null ? `The Hydroxyl Value is ${hydroxylValue.toFixed(3)}` : undefined;
   
   return (
     <CalculatorWrapper
       title="Hydroxyl (OH) Value Calculator"
       description="Determine the Hydroxyl Value. Input blank and sample titration values, sample weight, and the sample's Acid Value (AV)."
       formula={formula}
-      formulaTooltip={formulaTooltip}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -116,49 +123,39 @@ Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
               <section>
+                <h4 className="font-semibold text-md mb-2">Voice Control</h4>
+                <p className="text-muted-foreground italic mb-2">Try saying:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
+                  <li>"Set blank titration to twenty-five"</li>
+                  <li>"Sample titration is fifteen point two"</li>
+                  <li>"Weight is two point zero grams"</li>
+                  <li>"Acid value is zero point five"</li>
+                  <li>"Read the answer"</li>
+                </ul>
+              </section>
+              <section>
                 <h4 className="font-semibold text-md mb-2">1. Input Blank Titration Volume</h4>
                 <p className="mb-1 text-muted-foreground">
                   Enter the volume of titrant (e.g., 0.5N alcoholic KOH) used for the blank titration, in milliliters (mL). The blank titration is performed without the sample.
                 </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">25.0 mL</span></div>
               </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">2. Input Sample Titration Volume</h4>
                 <p className="mb-1 text-muted-foreground">
                   Enter the volume of the same titrant used for the titration of your sample, in milliliters (mL).
                 </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">15.0 mL</span></div>
               </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">3. Input Sample Weight</h4>
                 <p className="mb-1 text-muted-foreground">
                   Enter the weight of the sample used for the titration, in grams (g).
                 </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">2.0 g</span></div>
               </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">4. Input Acid Value (AV)</h4>
                 <p className="mb-1 text-muted-foreground">
-                  Enter the Acid Value of the sample in mg KOH/g. The Acid Value accounts for free acids present in the sample and is added to the hydroxyl component. If the sample has no free acids, or if this correction is not needed, you can enter 0.
+                  Enter the Acid Value of the sample in mg KOH/g. The Acid Value accounts for free acids present in the sample and is added to the hydroxyl component.
                 </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">0.5 mg KOH/g</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">5. Understanding the Result</h4>
-                <p className="mb-1 text-muted-foreground">
-                  The calculator will display the "Hydroxyl Value". The formula used is:
-                </p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <div className="text-muted-foreground">
-                  Where:
-                  <ul className="list-disc list-inside pl-4">
-                    <li>(Blank - Sample) is the difference in titrant volume.</li>
-                    <li>0.5 typically represents the normality of the KOH titrant (adjust if different).</li>
-                    <li>56.11 is the molecular weight of KOH.</li>
-                    <li>Weight is the sample weight in grams.</li>
-                    <li>Acid Value is the pre-determined AV of the sample.</li>
-                  </ul>
-                </div>
               </section>
             </div>
             <DialogFooter>

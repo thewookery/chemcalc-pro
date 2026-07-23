@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Copy, HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import VoiceAssistant from './VoiceAssistant';
 
 interface CalculatorWrapperProps {
   title: string;
@@ -14,6 +15,8 @@ interface CalculatorWrapperProps {
   formulaTooltip?: string;
   children: ReactNode;
   resultsToCopy?: string | (() => string);
+  voiceConfig?: { id: string; label: string; onUpdate: (val: string) => void }[];
+  voiceResultText?: string;
 }
 
 const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
@@ -23,6 +26,8 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
   formulaTooltip,
   children,
   resultsToCopy,
+  voiceConfig,
+  voiceResultText,
 }) => {
   const { toast } = useToast();
 
@@ -46,16 +51,25 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
   };
 
   return (
-    <Card className="w-full max-w-2xl mx-auto animate-slideUp shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline">{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+    <Card className="w-full max-w-2xl mx-auto animate-slideUp shadow-lg overflow-hidden">
+      <CardHeader className="relative">
+        <div className="flex justify-between items-start">
+          <div className="space-y-1.5">
+            <CardTitle className="text-2xl font-headline">{title}</CardTitle>
+            {description && <CardDescription>{description}</CardDescription>}
+          </div>
+          {voiceConfig && (
+            <div className="absolute top-6 right-6">
+              <VoiceAssistant fields={voiceConfig} resultToRead={voiceResultText} />
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {children}
       </CardContent>
       {(formula || resultsToCopy) && (
-        <CardFooter className="flex flex-col items-start gap-4 pt-6 border-t">
+        <CardFooter className="flex flex-col items-start gap-4 pt-6 border-t bg-muted/20">
           {formula && (
             <div className="text-sm text-muted-foreground w-full">
               <div className="flex items-center gap-1">

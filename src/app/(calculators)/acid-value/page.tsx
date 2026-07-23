@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -44,12 +43,21 @@ Sample Weight: ${sampleWeight} g
 Acid Value: ${acidValue.toFixed(3)}`;
   }, [mlTitrated, sampleWeight, acidValue]);
 
+  const voiceConfig = [
+    { id: 'mlTitrated', label: 'Titrant Volume', onUpdate: (val: string) => setMlTitrated(val) },
+    { id: 'sampleWeight', label: 'Sample Weight', onUpdate: (val: string) => setSampleWeight(val) },
+  ];
+
+  const voiceResultText = acidValue !== null ? `The Acid Value is ${acidValue.toFixed(3)}` : undefined;
+
   return (
     <CalculatorWrapper
       title="Acid Value Calculator"
       description="Calculate the Acid Value (AV) of a sample based on titration volume and sample weight."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -87,6 +95,15 @@ Acid Value: ${acidValue.toFixed(3)}`;
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
+              <section>
+                <h4 className="font-semibold text-md mb-2">Voice Commands</h4>
+                <p className="text-muted-foreground italic mb-2">Try saying things like:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
+                  <li>"Set titrant volume to one point five"</li>
+                  <li>"Sample weight is ten grams"</li>
+                  <li>"Read the result"</li>
+                </ul>
+              </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">1. Input Titrant Volume</h4>
                 <p className="mb-1 text-muted-foreground">
