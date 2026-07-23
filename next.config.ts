@@ -1,20 +1,23 @@
-
 import type {NextConfig} from 'next';
 
-// Adding a timestamp to try and force a cache refresh: 1720462916899
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
-    ignoreBuildErrors: false, // Changed to false
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: false, // Changed to false
+    ignoreDuringBuilds: false,
   },
   images: {
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'placehold.co',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
         port: '',
         pathname: '/**',
       },

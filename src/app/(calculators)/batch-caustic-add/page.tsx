@@ -1,13 +1,27 @@
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
-// This calculator has been removed as it was a duplicate.
-// The route still exists but its link from the homepage has been removed.
 export default function RemovedBatchCausticAddPage() {
   return (
-    <div className="p-4 text-center">
-      <h1 className="text-2xl font-semibold mb-4">Calculator Removed</h1>
-      <p className="text-muted-foreground">
-        The "Batch Caustic Add Calculator" has been removed from the application.
-      </p>
+    <div className="container max-w-md mx-auto py-12">
+      <Card className="text-center shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">Calculator Removed</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-muted-foreground">
+            The "Batch Caustic Add Calculator" was a duplicate and has been removed to streamline the application.
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Calculators
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
