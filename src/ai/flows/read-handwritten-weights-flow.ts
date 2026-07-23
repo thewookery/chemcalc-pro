@@ -61,7 +61,7 @@ Image:
 
 Identify the numbers associated with waste and stripping. Return null for any values that are unreadable.`,
   config: {
-    temperature: 0.0, // Low temperature for deterministic extraction
+    temperature: 0.0, 
   }
 });
 
@@ -83,7 +83,6 @@ const readHandwrittenWeightsFlow = ai.defineFlow(
         };
       }
       
-      // Clean and validate the numbers
       const wasteWeight = typeof output.wasteWeight === 'number' && !isNaN(output.wasteWeight) ? output.wasteWeight : null;
       const strippingWeight = typeof output.strippingWeight === 'number' && !isNaN(output.strippingWeight) ? output.strippingWeight : null;
       let errorMessage = output.errorMessage;
@@ -98,7 +97,6 @@ const readHandwrittenWeightsFlow = ai.defineFlow(
         errorMessage,
       };
     } catch (e: any) {
-      console.error('OCR Flow Error:', e);
       return {
         wasteWeight: null,
         strippingWeight: null,

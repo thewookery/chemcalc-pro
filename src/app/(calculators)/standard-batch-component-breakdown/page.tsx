@@ -1,26 +1,36 @@
-
 "use client";
 
-// This page's functionality has been merged into the 
-// "Multiple Components Calculator" page
-// located at /src/app/(calculators)/multiple-components-excess-add/page.tsx
-// which now handles component definition, excess add, and full batch breakdown.
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
 export default function MergedStandardBatchComponentBreakdownPage() {
   return (
-    <div className="p-4 text-center">
-      <h1 className="text-2xl font-semibold mb-4">Functionality Merged</h1>
-      <p className="text-muted-foreground mb-2">
-        The "Standard Batch Component Breakdown" features have been integrated into the:
-      </p>
-      <p className="font-semibold text-lg text-primary">
-        Multiple Components Calculator
-      </p>
-      <p className="text-muted-foreground mt-2">
-        Please navigate to that calculator from the homepage. This page is no longer active.
-      </p>
+    <div className="container max-w-md mx-auto py-12">
+      <Card className="text-center shadow-lg border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">Functionality Merged</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-muted-foreground">
+            The "Standard Batch Component Breakdown" features have been integrated into the more powerful "Multiple Components Calculator".
+          </p>
+          <div className="space-y-3">
+            <Button asChild className="w-full" variant="default">
+              <Link href="/multiple-components-excess-add">
+                Go to Multiple Components <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-
-    

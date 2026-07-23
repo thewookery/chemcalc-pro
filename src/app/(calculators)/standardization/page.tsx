@@ -1,35 +1,36 @@
-
 "use client";
 
-// This file is intentionally blank.
-// The original content was moved to /src/app/(calculators)/single-component-excess-add/page.tsx
-// This redirection or cleanup of the old route /standardization would typically be handled
-// by Next.js routing configuration (e.g., redirects in next.config.js) or by deleting this file
-// if the route is no longer needed. For now, it's left blank to signify the move.
+import React from 'react';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 
-// If you want to redirect users from /standardization to /single-component-excess-add,
-// you could use a client-side redirect:
-/*
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
-export default function OldStandardizationPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace('/single-component-excess-add');
-  }, [router]);
-  return null; // Or a loading message
-}
-*/
-
-// For the purpose of this exercise, simply leaving it blank or with a comment.
-// In a real scenario, a redirect or proper removal is better.
 export default function DeprecatedStandardizationPage() {
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-semibold">Page Moved</h1>
-      <p>This calculator has been moved. You might be looking for the "Single Component Excess Add" or "Multiple Components Excess Add" calculators.</p>
-      <p>Please navigate via the homepage.</p>
+    <div className="container max-w-md mx-auto py-12">
+      <Card className="text-center shadow-lg border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold">Calculator Moved</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-muted-foreground">
+            The "Standardization" calculator features have been updated and moved to the specialized addition tools.
+          </p>
+          <div className="space-y-3">
+            <Button asChild className="w-full" variant="default">
+              <Link href="/single-component-excess-add">
+                Go to Single Component Add <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild className="w-full" variant="outline">
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

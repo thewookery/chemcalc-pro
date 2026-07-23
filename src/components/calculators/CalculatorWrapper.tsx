@@ -36,8 +36,7 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
           description: "The results have been copied.",
         });
       })
-      .catch(err => {
-        console.error("Failed to copy: ", err);
+      .catch(() => {
         toast({
           title: "Error",
           description: "Could not copy results to clipboard.",
@@ -58,7 +57,7 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
       {(formula || resultsToCopy) && (
         <CardFooter className="flex flex-col items-start gap-4 pt-6 border-t">
           {formula && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground w-full">
               <div className="flex items-center gap-1">
                 <strong>Formula:</strong>
                 {formulaTooltip && (
@@ -76,7 +75,9 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
                   </TooltipProvider>
                 )}
               </div>
-              <code className="block mt-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
+              <code className="block mt-1 p-2 bg-muted rounded text-xs font-mono overflow-x-auto whitespace-pre-wrap">
+                {formula}
+              </code>
             </div>
           )}
           {resultsToCopy && (

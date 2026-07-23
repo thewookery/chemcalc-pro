@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import Image from 'next/image';
 import CalculatorWrapper from '@/components/calculators/CalculatorWrapper';
 import CommonInput from '@/components/calculators/CommonInput';
@@ -10,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { HelpCircle, UploadCloud, XCircle, Loader2, ScanText } from 'lucide-react';
+import { HelpCircle, XCircle, Loader2, ScanText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { readHandwrittenWeights, type ReadHandwrittenWeightsOutput } from '@/ai/flows/read-handwritten-weights-flow';
 import {
@@ -38,7 +37,7 @@ const WasteStrippingOcrCalculatorLogic: React.FC = () => {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 4 * 1024 * 1024) { // Max 4MB
+      if (file.size > 4 * 1024 * 1024) { 
         toast({
           variant: "destructive",
           title: "Image Too Large",
@@ -108,7 +107,6 @@ const WasteStrippingOcrCalculatorLogic: React.FC = () => {
       }
 
     } catch (error: any) {
-      console.error("OCR Error:", error);
       setOcrError(error.message || "Failed to analyze image.");
       toast({
         variant: "destructive",
@@ -240,7 +238,7 @@ const WasteStrippingOcrCalculatorLogic: React.FC = () => {
               <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl">How to Use the Handwritten Weights OCR Calculator</DialogTitle>
               <DialogDescription>
