@@ -201,8 +201,6 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
   const watchedComponents = watch('components');
   const watchedTotalExcessUnitsToAdd = watch('totalExcessUnitsToAdd');
   const watchedTargetBatchWeight = watch('targetBatchWeight');
-  const watchedReferenceOriginalTotalBatchWeightForSave = watch('referenceOriginalTotalBatchWeightForSave');
-
 
   const [excessAddResults, setExcessAddResults] = useState<CalculatedExcessComponent[]>([]);
   const [totalOriginalPercentage, setTotalOriginalPercentage] = useState<number>(0);
@@ -220,6 +218,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
     let currentTotalOriginalPerc = 0;
     const tempResults: CalculatedExcessComponent[] = [];
 
+    // Step 1: Calculate total original % to standardize
     watchedComponents.forEach(comp => {
       const perc = parseFloat(comp.percentageFromTicket);
       if (!isNaN(perc) && perc > 0) {
@@ -231,6 +230,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
     let currentSumOfStandardizedPerc = 0;
     let currentSumOfExcessUnits = 0;
 
+    // Step 2: Standardize and calculate excess units for each component
     if (currentTotalOriginalPerc > 0) {
       watchedComponents.forEach(comp => {
         const originalPerc = parseFloat(comp.percentageFromTicket);
@@ -241,7 +241,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
           currentSumOfStandardizedPerc += standardizedPerc;
 
           let unitsForThisComponent = NaN;
-          if (!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits >= 0) { // Allow 0 excess units
+          if (!isNaN(parsedTotalExcessUnits) && parsedTotalExcessUnits >= 0) {
             unitsForThisComponent = (standardizedPerc / 100) * parsedTotalExcessUnits;
             if(!isNaN(unitsForThisComponent)) {
                  currentSumOfExcessUnits += unitsForThisComponent;
@@ -289,6 +289,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
     let allInputsValidForSum = true;
     const parsedTargetBatchWeight = parseFloat(watchedTargetBatchWeight);
 
+    // Step 3: Calculate % of add and final batch weights
     excessAddResults.forEach(compFromPart1 => {
       const excessUnits = compFromPart1.unitsToAdd;
       const avOrOh = compFromPart1.avOrOhValue;
@@ -316,7 +317,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
       newPart2Results.push({
         name: compFromPart1.name,
         excessUnits: isNaN(excessUnits) ? NaN : excessUnits,
-        avOrOhValue: isNaN(avOrOh) ? NaN : avOrOh,
+        avOrOhValue: isNaN(avOrOh) ? NaN : avOhVal,
         percentageOfAdd: percentageOfAdd,
         unitsForBatchWeight: unitsForBatchWeightCalc,
       });
@@ -324,10 +325,10 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
 
     setPart2Results(newPart2Results);
     
-    if (allInputsValidForSum && !isNaN(currentSumOfUnitsForBatchWeight) && !isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && newPart2Results.some(r => typeof r.unitsForBatchWeight === 'number' && !isNaN(r.unitsForBatchWeight))) {
+    // Check if we have enough valid data to show a total sum
+    const hasAnyResults = newPart2Results.some(r => typeof r.unitsForBatchWeight === 'number' && !isNaN(r.unitsForBatchWeight));
+    if (allInputsValidForSum && !isNaN(currentSumOfUnitsForBatchWeight) && !isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0 && hasAnyResults) {
         setSumOfUnitsForTargetBatchWeight(currentSumOfUnitsForBatchWeight);
-    } else if (newPart2Results.some(r => !isNaN(r.excessUnits) && r.excessUnits !== 0 && (!isNaN(parsedTargetBatchWeight) && parsedTargetBatchWeight > 0))) {
-        setSumOfUnitsForTargetBatchWeight(allInputsValidForSum ? currentSumOfUnitsForBatchWeight : null);
     } else {
         setSumOfUnitsForTargetBatchWeight(null);
     }
@@ -355,12 +356,8 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
 
   const resultsToCopy = useMemo(() => {
     let text = `Multiple Components Calculation:\n\n`;
-    text += `Batch Weight: ${watchedTargetBatchWeight}\n`;
+    text += `Target Batch Weight: ${watchedTargetBatchWeight}\n`;
     text += `Total Excess Units to Add: ${watchedTotalExcessUnitsToAdd}\n\n`;
-    text += `Components (Original % from Batch Ticket & AV/OH):\n`;
-    watchedComponents.forEach((comp, index) => {
-      text += `  - ${comp.name || `Component ${index+1}`}: ${comp.percentageFromTicket}% (AV/OH: ${comp.avOrOhValue || 'N/A'})\n`;
-    });
     text += `Total Original % from Batch Ticket: ${totalOriginalPercentage.toFixed(2)}%\n\n`;
 
     text += `Calculated Breakdown:\n`;
@@ -371,16 +368,16 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
       text += `${isNaN(res.percentageFromTicket) ? 'N/A'.padEnd(7) : (res.percentageFromTicket.toFixed(2) + '%').padEnd(7)} | `
       text += `${isNaN(res.avOrOhValue) ? 'N/A'.padEnd(5) : res.avOrOhValue.toString().padEnd(5)} | `
       text += `${isNaN(res.standardizedPercentage) ? 'N/A'.padEnd(6) : (res.standardizedPercentage.toFixed(2) + '%').padEnd(6)} | `
-      text += `${isNaN(res.unitsToAdd) ? 'N/A'.padEnd(12) : res.unitsToAdd.toFixed(3).padEnd(12)} | `
-      text += `${isNaN(res.percentageOfAdd) ? 'N/A'.padEnd(8) : (res.percentageOfAdd.toFixed(3) + '%').padEnd(8)} | `
-      text += `${isNaN(res.unitsForBatchWeight) ? 'N/A' : res.unitsForBatchWeight.toFixed(3)}\n`;
+      text += `${isNaN(res.unitsToAdd) ? 'N/A'.padEnd(12) : res.unitsToAdd.toFixed(4).padEnd(12)} | `
+      text += `${isNaN(res.percentageOfAdd) ? 'N/A'.padEnd(8) : (res.percentageOfAdd.toFixed(4) + '%').padEnd(8)} | `
+      text += `${isNaN(res.unitsForBatchWeight) ? 'N/A' : res.unitsForBatchWeight.toFixed(4)}\n`;
     });
     text += `\nSum of Standardized Percentages: ${sumOfStandardizedPercentage.toFixed(2)}%\n`;
-    text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(3)}\n`;
-    text += `Sum of '# to add (Batch Wt.)' Values: ${sumOfUnitsForTargetBatchWeight !== null && !isNaN(sumOfUnitsForTargetBatchWeight) ? sumOfUnitsForTargetBatchWeight.toFixed(3) : 'N/A'}\n`;
+    text += `Sum of Calculated Excess Units: ${sumOfCalculatedExcessUnits.toFixed(4)}\n`;
+    text += `Sum of '# to Add (Batch Wt.)' Values: ${sumOfUnitsForTargetBatchWeight !== null && !isNaN(sumOfUnitsForTargetBatchWeight) ? sumOfUnitsForTargetBatchWeight.toFixed(4) : 'N/A'}\n`;
 
     return text;
-  }, [watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, watchedComponents, totalOriginalPercentage, displayResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, sumOfUnitsForTargetBatchWeight]);
+  }, [watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, totalOriginalPercentage, displayResults, sumOfStandardizedPercentage, sumOfCalculatedExcessUnits, sumOfUnitsForTargetBatchWeight]);
 
   const handleSaveFormula = () => {
     const formulaName = watch('saveFormulaName');
@@ -458,7 +455,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
       formula={formula}
       resultsToCopy={resultsToCopy}
     >
-      <form onSubmit={handleSubmit(() => { /* Calculations are real-time */ })} className="space-y-8">
+      <form onSubmit={handleSubmit(() => {})} className="space-y-8">
         
         <section className="space-y-4 p-4 border rounded-md bg-muted/30">
             <h3 className="text-xl font-semibold mb-3 text-primary">Component Details</h3>
@@ -486,7 +483,6 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                         />
                     )}
                     />
-                    {errors.components?.[index]?.name && <p className="text-xs text-destructive mt-1">{errors.components[index]?.name?.message}</p>}
                 </div>
 
                 <CommonInput
@@ -495,11 +491,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                     className="h-9 calculator-input text-input-foreground"
                     unit="%"
                     placeholder="e.g., 78.89"
-                    {...register(`components.${index}.percentageFromTicket`, {
-                        setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
-                        validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "% must be positive or empty"
-                    })}
-                    errorMessage={errors.components?.[index]?.percentageFromTicket?.message}
+                    {...register(`components.${index}.percentageFromTicket`)}
                 />
 
                 <CommonInput
@@ -508,11 +500,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                     className="h-9 calculator-input text-input-foreground"
                     placeholder="e.g., 389"
                     tooltipText="Acid Value or Hydroxyl Value of this material. Pre-fills if material is selected."
-                    {...register(`components.${index}.avOrOhValue`, {
-                        setValueAs: (v) => v === "" ? "" : (parseFloat(v).toString()), 
-                        validate: value => value === "" || (!isNaN(parseFloat(value))) || "Must be a number or empty"
-                    })}
-                    errorMessage={errors.components?.[index]?.avOrOhValue?.message}
+                    {...register(`components.${index}.avOrOhValue`)}
                 />
 
                 <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="self-center md:self-end" aria-label="Remove component">
@@ -540,25 +528,17 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                 id="targetBatchWeight"
                 label="Batch Weight"
                 unit="Units"
-                {...register('targetBatchWeight', {
-                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
-                    validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
-                })}
+                {...register('targetBatchWeight')}
                 placeholder="e.g., 1000"
                 tooltipText="The total weight for the final batch calculation using % of add values."
-                errorMessage={errors.targetBatchWeight?.message}
                 />
                 <CommonInput
                 id="totalExcessUnitsToAdd"
                 label="Total Excess Units to Add"
                 unit="Units"
-                {...register('totalExcessUnitsToAdd', {
-                    setValueAs: (v) => v === "" ? "" : (parseFloat(v) >= 0 ? parseFloat(v).toString() : ""),
-                    validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0) || "Must be positive or empty"
-                })}
+                {...register('totalExcessUnitsToAdd')}
                 placeholder="e.g., 20"
                 tooltipText="The total combined amount of all excess components you intend to add."
-                errorMessage={errors.totalExcessUnitsToAdd?.message}
                 />
             </div>
         </section>
@@ -572,15 +552,15 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                 <div className="flex-1">Component Name</div>
                 <div className="w-1/3 md:w-1/4 text-right">% of Add</div>
                 <div className="w-1/3 md:w-1/4 text-right"># to Add (Batch Wt.)</div>
-                <div className="w-10 md:w-12 text-center"> </div> {/* For accordion arrow */}
+                <div className="w-10 md:w-12 text-center"> </div>
             </div>
             <Accordion type="single" collapsible className="w-full space-y-1">
               {displayResults.map((comp, index) => (
                 <AccordionItem value={`item-${index}`} key={`display-accordion-${index}`} className="border rounded-md overflow-hidden shadow-sm">
                   <AccordionTrigger className="flex w-full items-center p-3 hover:bg-muted/50 text-sm data-[state=open]:bg-muted/60 [&[data-state=open]>svg]:text-primary">
                     <div className="flex-1 text-left font-medium truncate pr-2">{comp.name || `Component ${index + 1}`}</div>
-                    <div className="w-1/3 md:w-1/4 text-right">{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(3)}%`}</div>
-                    <div className="w-1/3 md:w-1/4 text-right font-semibold text-primary">{isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(3)}</div>
+                    <div className="w-1/3 md:w-1/4 text-right">{isNaN(comp.percentageOfAdd) ? '-' : `${comp.percentageOfAdd.toFixed(4)}%`}</div>
+                    <div className="w-1/3 md:w-1/4 text-right font-semibold text-primary">{isNaN(comp.unitsForBatchWeight) ? '-' : comp.unitsForBatchWeight.toFixed(4)}</div>
                   </AccordionTrigger>
                   <AccordionContent className="p-4 bg-background border-t">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 text-sm">
@@ -598,7 +578,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-medium text-muted-foreground">Excess Units:</p>
-                        <p className="text-foreground">{isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(3)}</p>
+                        <p className="text-foreground">{isNaN(comp.unitsToAdd) ? '-' : comp.unitsToAdd.toFixed(4)}</p>
                       </div>
                     </div>
                   </AccordionContent>
@@ -617,24 +597,14 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                 <ResultDisplay label="Sum of '# to Add (Batch Wt.)'" value={sumOfUnitsForTargetBatchWeight} unit="Units" variant="highlight"/>
             </div>
 
-            { Math.abs(parseFloat(watchedTotalExcessUnitsToAdd) - sumOfCalculatedExcessUnits) > 0.001 && !isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) && sumOfCalculatedExcessUnits > 0 && watchedComponents.some(c => c.percentageFromTicket && parseFloat(c.percentageFromTicket) > 0) && (
-                <p className="text-sm text-orange-500 dark:text-orange-400">
-                    Note: Sum of calculated excess units ({sumOfCalculatedExcessUnits.toFixed(3)}) may not exactly match total excess units input due to rounding or if total original % is zero.
+            { Math.abs(parseFloat(watchedTotalExcessUnitsToAdd) - sumOfCalculatedExcessUnits) > 0.001 && !isNaN(parseFloat(watchedTotalExcessUnitsToAdd)) && sumOfCalculatedExcessUnits > 0 && totalOriginalPercentage > 0 && (
+                <p className="text-sm text-orange-500 dark:text-orange-400 font-medium">
+                    Note: Sum of calculated excess units ({sumOfCalculatedExcessUnits.toFixed(4)}) may not exactly match input ({watchedTotalExcessUnitsToAdd}) due to rounding.
                 </p>
             )}
-            { totalOriginalPercentage === 0 && watchedComponents.some(c => c.percentageFromTicket === '' || parseFloat(c.percentageFromTicket) === 0) && parseFloat(watchedTotalExcessUnitsToAdd) > 0 && (
-                <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter component percentages from the batch ticket to calculate excess units. Total original percentage is currently zero.
-                </p>
-            )}
-            { displayResults.some(r => !isNaN(r.unitsToAdd) && r.unitsToAdd !== 0 && (isNaN(r.avOrOhValue) || r.avOrOhValue === 0)) && (
-                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter a non-zero AV/OH value for components with excess units to calculate '% of Add' and subsequent '# to Add'.
-                </p>
-            )}
-            {displayResults.some(r => !isNaN(r.percentageOfAdd) && (isNaN(parseFloat(watchedTargetBatchWeight)) || parseFloat(watchedTargetBatchWeight) <= 0)) && (
-                 <p className="text-sm text-amber-600 dark:text-amber-400">
-                    Enter a valid Batch Weight to calculate final '# to add' values.
+            { totalOriginalPercentage === 0 && parseFloat(watchedTotalExcessUnitsToAdd) > 0 && (
+                <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                    Please enter component percentages from the batch ticket to calculate excess unit distribution.
                 </p>
             )}
         </section>
@@ -652,7 +622,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
             <DialogHeader>
               <DialogTitle className="text-xl">How to Use the Multiple Components Calculator</DialogTitle>
               <DialogDescription>
-                This calculator helps you define components, calculate excess additions, and determine full batch component weights.
+                This calculator helps you define components, calculate proportional excess additions, and determine full batch component weights.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
@@ -660,76 +630,26 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                 <h4 className="font-semibold text-md mb-2">1. Component Details</h4>
                 <p className="mb-1">First, define each raw material (component) for your batch:</p>
                 <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li>
-                    <strong>Name:</strong> Identify the material. Select from a list or type a custom name.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">2-Ethylhexanoic Acid</span></div>
-                  </li>
-                  <li>
-                    <strong>Batch Ticket %:</strong> Enter the component's percentage from your standard batch ticket.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">78.89 %</span></div>
-                  </li>
-                  <li>
-                    <strong>AV/OH Value:</strong> Acid Value or Hydroxyl Value. Auto-fills for known materials.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">389</span></div>
-                  </li>
+                  <li><strong>Name:</strong> Identify the material.</li>
+                  <li><strong>Batch Ticket %:</strong> The standard percentage from your master batch ticket.</li>
+                  <li><strong>AV/OH Value:</strong> Acid Value or Hydroxyl Value of the material.</li>
                 </ul>
-                <p className="mt-2 text-muted-foreground">Use the <span className="inline-flex items-center"><PlusCircle className="h-3 w-3 mr-1"/> Add Component</span> button to add more rows, or the <Trash2 className="inline-block h-3 w-3"/> icon to remove a component.</p>
-                <p className="mt-1 text-muted-foreground">The "Total Original % from Ticket" (displayed below components) sums all "Batch Ticket %" entries. If this total isn't 100%, the calculator standardizes percentages for internal calculations.</p>
+                <p className="mt-2 text-muted-foreground">The "Total Original % from Ticket" sums these entries. If it's not 100%, the calculator standardizes them internally to sum to 100% for proportional distribution.</p>
               </section>
 
               <section>
                 <h4 className="font-semibold text-md mb-2">2. Overall Batch Parameters</h4>
-                 <p className="mb-1">Next, specify the overall targets for your batch:</p>
                 <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li>
-                    <strong>Batch Weight:</strong> Desired total weight for your final batch.
-                     <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 pounds</span></div>
-                  </li>
-                  <li>
-                    <strong>Total Excess Units to Add:</strong> Total combined amount of *all excess components*.
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">20 Units</span></div>
-                  </li>
+                  <li><strong>Batch Weight:</strong> Target total weight for the final calculation.</li>
+                  <li><strong>Total Excess Units to Add:</strong> The combined amount of all reactive units you need to add to the batch.</li>
                 </ul>
               </section>
 
               <section>
                 <h4 className="font-semibold text-md mb-2">3. Calculated Results</h4>
-                <p className="mb-1 text-muted-foreground">This section shows the calculated breakdown for each component. Click on a component row to expand and see more details.</p>
-                <p className="font-medium mt-2">Displayed by Default in each row:</p>
                 <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Component Name:</strong> As entered.</li>
-                  <li><strong>% of Add:</strong> Calculated as: <code>(Excess Units / AV_OH Value) * 100</code>. This is the percentage of this specific component needed, relative to its own AV/OH value, based on its share of the "Total Excess Units to Add".</li>
-                  <li><strong># to Add (Batch Wt.):</strong> Calculated as: <code>(% of Add / 100) * Batch Weight</code>. This is the actual amount of this component to add to achieve your target "Batch Weight".</li>
-                </ul>
-                 <p className="font-medium mt-2">Details inside Accordion (Click to Expand):</p>
-                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Original %:</strong> The "Batch Ticket %" you entered.</li>
-                  <li><strong>AV/OH:</strong> The AV/OH value for that component.</li>
-                  <li><strong>Std. % (Standardized Percentage):</strong> Calculated as: <code>(Component's Batch Ticket % / Total Original % from Ticket) * 100</code>. This normalizes component percentages to sum to 100% for proportional calculations.</li>
-                  <li><strong>Excess Units:</strong> Calculated as: <code>(Standardized % / 100) * Total Excess Units to Add</code>. This is the portion of the "Total Excess Units to Add" allocated to this specific component.</li>
-                </ul>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-md mb-2">4. Summary Statistics</h4>
-                <p className="mb-1 text-muted-foreground">These values appear below the main results table:</p>
-                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Sum of Standardized %:</strong> This should ideally be 100%. The color indicates if it's 100% (green) or not (red). If not 100%, it means your original "Batch Ticket %" entries didn't sum to 100, but the calculator uses these standardized values for subsequent calculations.</li>
-                  <li><strong>Sum of Calculated Excess Units:</strong> This should ideally match your "Total Excess Units to Add" input. Minor differences can occur due to rounding.</li>
-                  <li><strong>Sum of '# to Add (Batch Wt.)':</strong> This is the sum of the final amounts for each component. This value represents the total material weight calculated from the "% of Add" values and your target "Batch Weight".</li>
-                </ul>
-              </section>
-
-              <section>
-                <h4 className="font-semibold text-md mb-2">5. Saving and Loading Formulas</h4>
-                <p className="mb-1 text-muted-foreground">
-                  You can save your current "Component Details" (Name, Batch Ticket %, AV/OH Value) along with a "Reference Original Total Batch Weight" for quick reuse. This is useful for standard product formulas. Use the fields in the "Manage Saved Formulas" section to save or load a configuration.
-                </p>
-                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Formula Name to Save:</strong>
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">Product XYZ Standard</span></div></li>
-                  <li><strong>Reference Original Total Batch Weight for Saved Formula:</strong>
-                    <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">100000 lbs</span></div></li>
+                  <li><strong>% of Add:</strong> <code>(Excess Units for this component / AV_OH) * 100</code>.</li>
+                  <li><strong># to Add (Batch Wt.):</strong> <code>(% of Add / 100) * Target Batch Weight</code>. This is your final weigh-out amount.</li>
                 </ul>
               </section>
             </div>
@@ -741,7 +661,6 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
           </DialogContent>
         </Dialog>
       </div>
-      
 
       <div className="mt-8 pt-6 border-t">
         <h3 className="text-lg font-medium mb-3">Manage Saved Formulas</h3>
@@ -749,34 +668,23 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
             <div>
                 <Label htmlFor="saveFormulaName">Formula Name to Save</Label>
-                <Input id="saveFormulaName" {...register('saveFormulaName')} placeholder="e.g., Product XYZ Standard Formula" className="h-9" />
+                <Input id="saveFormulaName" {...register('saveFormulaName')} placeholder="e.g., Standard Formula" className="h-9" />
             </div>
             <CommonInput
               id="referenceOriginalTotalBatchWeightForSave"
-              label="Reference Original Total Batch Weight for Saved Formula"
+              label="Reference Standard Total Weight"
               className="h-9 calculator-input"
-              tooltipText="Enter the original total weight this formula's percentages typically represent (e.g., 100000 lbs). Used for compatibility if loading into Short Batch Adjustment calculator."
-              {...register('referenceOriginalTotalBatchWeightForSave', {
-                  setValueAs: (v) => v === "" ? "" : (parseFloat(v) > 0 ? parseFloat(v).toString() : ""),
-                  validate: value => value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) > 0) || "Must be a positive number"
-              })}
-              errorMessage={errors.referenceOriginalTotalBatchWeightForSave?.message}
+              tooltipText="Original total weight this formula represents (e.g., 100,000 lbs)."
+              {...register('referenceOriginalTotalBatchWeightForSave')}
             />
           </div>
           <Button
             onClick={handleSaveFormula}
             size="sm"
             className="mt-2"
-            disabled={
-              !watch('saveFormulaName').trim() ||
-              !watchedReferenceOriginalTotalBatchWeightForSave ||
-              isNaN(parseFloat(watchedReferenceOriginalTotalBatchWeightForSave)) ||
-              parseFloat(watchedReferenceOriginalTotalBatchWeightForSave) <= 0 ||
-              watchedComponents.length === 0 ||
-              watchedComponents.some(c => !c.name || !c.percentageFromTicket || isNaN(parseFloat(c.percentageFromTicket)))
-            }
+            disabled={!watch('saveFormulaName').trim() || watchedComponents.length === 0}
           >
-            <Save className="mr-2 h-4 w-4" /> Save Current Formula (Original %s & AV/OH)
+            <Save className="mr-2 h-4 w-4" /> Save Current Formula
           </Button>
 
           {savedFormulas.length > 0 && (
@@ -790,54 +698,18 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
                         setSelectedFormulaToLoad(e.target.value);
                         if(e.target.value) handleLoadFormula(e.target.value);
                     }}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
                 >
-                    <option value="">Select a formula to load...</option>
+                    <option value="">Select a formula...</option>
                     {savedFormulas.map(formula => (
                       <option key={formula.id} value={formula.id}>
-                        {formula.name} (Ref Wt: {formula.originalStandardTotalBatchWeight}, Saved: {new Date(formula.createdAt).toLocaleDateString()})
+                        {formula.name} ({new Date(formula.createdAt).toLocaleDateString()})
                       </option>
                     ))}
                 </select>
               </div>
-
-              <h4 className="text-sm font-medium mt-4">Saved Formulas:</h4>
-              <ul className="space-y-1 max-h-40 overflow-y-auto border rounded-md p-2">
-                {savedFormulas.map(formula => (
-                  <li key={formula.id} className="flex justify-between items-center p-2 text-sm hover:bg-muted/50 rounded">
-                    <span className="truncate pr-2">{formula.name} (Ref Wt: {formula.originalStandardTotalBatchWeight})</span>
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleLoadFormula(formula.id)} aria-label={`Load ${formula.name}`}>
-                            <Upload className="h-4 w-4"/>
-                        </Button>
-                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive h-7 w-7" aria-label={`Delete ${formula.name}`}>
-                                <Trash2 className="h-4 w-4"/>
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the formula "{formula.name}".
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDeleteFormula(formula.id)} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                    </div>
-                  </li>
-                ))}
-              </ul>
             </div>
           )}
-           {savedFormulas.length === 0 && <p className="text-sm text-muted-foreground mt-4">No formulas saved yet.</p>}
         </div>
       </div>
     </CalculatorWrapper>

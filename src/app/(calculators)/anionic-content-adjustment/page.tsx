@@ -29,6 +29,8 @@ const AnionicContentAdjustmentPage: React.FC = () => {
     const desired = parseFloat(desiredAnionic);
     const batchWt = parseFloat(batchWeight);
 
+    // Math: Water to Add = BatchWeight * (Current / Desired) - BatchWeight
+    // Only valid if current > desired (dilution)
     if (!isNaN(current) && !isNaN(desired) && !isNaN(batchWt) && desired > 0 && batchWt > 0 && current >= desired) {
       const finalBatchWeight = batchWt * (current / desired);
       const water = finalBatchWeight - batchWt;
@@ -47,7 +49,7 @@ const AnionicContentAdjustmentPage: React.FC = () => {
 Current Anionic: ${currentAnionic} %
 Desired Anionic: ${desiredAnionic} %
 Batch Weight: ${batchWeight} lbs
-Water to Add: ${waterToAdd.toFixed(3)} lbs`;
+Water to Add: ${waterToAdd.toFixed(4)} lbs`;
   }, [currentAnionic, desiredAnionic, batchWeight, waterToAdd]);
 
   return (
@@ -66,7 +68,7 @@ Water to Add: ${waterToAdd.toFixed(3)} lbs`;
           value={currentAnionic}
           onChange={(e) => setCurrentAnionic(e.target.value)}
           placeholder="e.g., 30.0"
-          tooltipText="Current anionic percentage of the batch."
+          tooltipText="Current measured anionic percentage of the batch."
         />
         <CommonInput
           id="desiredAnionic"
@@ -88,7 +90,7 @@ Water to Add: ${waterToAdd.toFixed(3)} lbs`;
         />
         <ResultDisplay label="Water to Add" value={waterToAdd} unit="lbs" variant="highlight" />
         {parseFloat(currentAnionic) < parseFloat(desiredAnionic) && !isNaN(parseFloat(currentAnionic)) && !isNaN(parseFloat(desiredAnionic)) && (
-          <p className="text-sm text-orange-600 dark:text-orange-400">Note: Desired % cannot be higher than current % for dilution with water.</p>
+          <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Note: Desired % cannot be higher than current % for dilution. Use this calculator only for adjusting downward.</p>
         )}
       </div>
       <div className="mt-8 pt-6 border-t">

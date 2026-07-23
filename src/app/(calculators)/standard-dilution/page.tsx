@@ -30,6 +30,8 @@ const StandardDilutionPage: React.FC = () => {
     const targetConc = parseFloat(m2);
     const finalVol = parseFloat(v2);
 
+    // Math: V1 = (M2 * V2) / M1
+    // Only valid if stockConc >= targetConc
     if (!isNaN(stockConc) && !isNaN(targetConc) && !isNaN(finalVol) && stockConc > 0 && finalVol > 0 && stockConc >= targetConc) {
       const volStock = (targetConc * finalVol) / stockConc;
       setV1(volStock);
@@ -46,12 +48,12 @@ const StandardDilutionPage: React.FC = () => {
   const resultsToCopy = useMemo(() => {
     if (v1 === null || waterToAdd === null) return "";
     return `Standard Dilution (M1V1 = M2V2):
-Stock Concentration (M1): ${m1} (units)
-Target Concentration (M2): ${m2} (units)
-Final Volume (V2): ${v2} (units)
+Stock Concentration (M1): ${m1}
+Target Concentration (M2): ${m2}
+Final Volume (V2): ${v2}
 ---
-Volume of Stock to Use (V1): ${v1.toFixed(3)} (units)
-Water/Diluent to Add: ${waterToAdd.toFixed(3)} (units)`;
+Volume of Stock to Use (V1): ${v1.toFixed(4)}
+Water/Diluent to Add: ${waterToAdd.toFixed(4)}`;
   }, [m1, m2, v2, v1, waterToAdd]);
 
   return (
@@ -69,7 +71,7 @@ Water/Diluent to Add: ${waterToAdd.toFixed(3)} (units)`;
           value={m1}
           onChange={(e) => setM1(e.target.value)}
           placeholder="e.g., 10 (M, %, etc.)"
-          tooltipText="Concentration of your stock solution."
+          tooltipText="Concentration of your starting stock solution."
         />
         <CommonInput
           id="m2"
@@ -77,7 +79,7 @@ Water/Diluent to Add: ${waterToAdd.toFixed(3)} (units)`;
           value={m2}
           onChange={(e) => setM2(e.target.value)}
           placeholder="e.g., 1 (M, %, etc.)"
-          tooltipText="Desired final concentration."
+          tooltipText="Desired final concentration of the diluted solution."
         />
         <CommonInput
           id="v2"
@@ -90,7 +92,7 @@ Water/Diluent to Add: ${waterToAdd.toFixed(3)} (units)`;
         <ResultDisplay label="Volume of Stock to Use (V1)" value={v1} unit="(units)" variant="highlight" />
         <ResultDisplay label="Water/Diluent to Add" value={waterToAdd} unit="(units)" />
          {parseFloat(m1) < parseFloat(m2) && !isNaN(parseFloat(m1)) && !isNaN(parseFloat(m2)) && (
-          <p className="text-sm text-orange-600 dark:text-orange-400">Note: Stock concentration (M1) cannot be less than target concentration (M2) for dilution.</p>
+          <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">Note: Stock concentration (M1) cannot be less than target concentration (M2). This calculator is only for dilutions.</p>
         )}
       </div>
       <div className="mt-8 pt-6 border-t">
