@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -29,8 +28,6 @@ const AnionicContentAdjustmentPage: React.FC = () => {
     const desired = parseFloat(desiredAnionic);
     const batchWt = parseFloat(batchWeight);
 
-    // Math: Water to Add = BatchWeight * (Current / Desired) - BatchWeight
-    // Only valid if current > desired (dilution)
     if (!isNaN(current) && !isNaN(desired) && !isNaN(batchWt) && desired > 0 && batchWt > 0 && current >= desired) {
       const finalBatchWeight = batchWt * (current / desired);
       const water = finalBatchWeight - batchWt;
@@ -52,6 +49,14 @@ Batch Weight: ${batchWeight} lbs
 Water to Add: ${waterToAdd.toFixed(4)} lbs`;
   }, [currentAnionic, desiredAnionic, batchWeight, waterToAdd]);
 
+  const voiceConfig = [
+    { id: 'currentAnionic', label: 'Current Anionic Percentage', onUpdate: (val: string) => setCurrentAnionic(val) },
+    { id: 'desiredAnionic', label: 'Desired Anionic Percentage', onUpdate: (val: string) => setDesiredAnionic(val) },
+    { id: 'batchWeightAnionic', label: 'Batch Weight', onUpdate: (val: string) => setBatchWeight(val) },
+  ];
+
+  const voiceResultText = waterToAdd !== null ? `Add ${waterToAdd.toFixed(2)} pounds of water.` : undefined;
+
   return (
     <CalculatorWrapper
       title="Anionic Content Adjustment"
@@ -59,6 +64,8 @@ Water to Add: ${waterToAdd.toFixed(4)} lbs`;
       formula={formula}
       formulaTooltip={formulaTooltip}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -109,35 +116,24 @@ Water to Add: ${waterToAdd.toFixed(4)} lbs`;
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
               <section>
+                <h4 className="font-semibold text-md mb-2">Voice Commands</h4>
+                <p className="text-muted-foreground italic mb-2">Try saying things like:</p>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
+                  <li>"Set current anionic percentage to thirty"</li>
+                  <li>"Desired anionic percentage is twenty eight"</li>
+                  <li>"Read the result"</li>
+                </ul>
+              </section>
+              <section>
                 <h4 className="font-semibold text-md mb-2">1. Input Current Anionic %</h4>
                 <p className="mb-1 text-muted-foreground">
                   Enter the current measured anionic percentage of your batch.
                 </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">30.0 %</span></div>
               </section>
               <section>
                 <h4 className="font-semibold text-md mb-2">2. Input Desired Anionic %</h4>
                 <p className="mb-1 text-muted-foreground">
-                  Enter the target anionic percentage you want to achieve after dilution. This value must be less than or equal to the "Current Anionic %".
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">28.0 %</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">3. Input Batch Weight</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the current total weight of your batch in pounds (lbs).
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 lbs</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">4. Understanding the Result</h4>
-                <p className="mb-1 text-muted-foreground">
-                  The calculator will display the "Water to Add" in pounds (lbs). This is the amount of diluent needed to reach your target anionic percentage.
-                </p>
-                <p className="mb-1 text-muted-foreground">The formula used is:</p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <p className="text-muted-foreground">
-                  This calculation assumes the diluent (e.g., water) has 0% anionic content.
+                  Enter the target anionic percentage you want to achieve after dilution.
                 </p>
               </section>
             </div>

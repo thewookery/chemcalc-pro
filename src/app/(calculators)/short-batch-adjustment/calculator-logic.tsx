@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -9,24 +8,11 @@ import ResultDisplay from '@/components/calculators/ResultDisplay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trash2, PlusCircle, Save, Upload, AlertTriangle, HelpCircle } from 'lucide-react';
+import { Trash2, PlusCircle, Save, AlertTriangle, HelpCircle } from 'lucide-react';
 import type { SavedBatch, AdjustedComponent } from '@/types';
 import useLocalStorage from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -40,7 +26,6 @@ import {
   DialogTrigger as HelpDialogTrigger,
   Dialog as HelpDialog,
 } from "@/components/ui/dialog";
-
 
 interface FormData {
   availableLimitingMaterialWt: string;
@@ -58,7 +43,7 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
   const [savedBatches, setSavedBatches] = useLocalStorage<SavedBatch[]>(SAVED_BATCHES_KEY, []);
   const [selectedBatchToLoad, setSelectedBatchToLoad] = useState<string>('');
 
-  const { register, control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const { register, control, handleSubmit, watch, setValue, reset } = useForm<FormData>({
     defaultValues: {
       availableLimitingMaterialWt: '',
       ticketLimitingMaterialWt: '',
@@ -85,17 +70,15 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
   const [sumOfCalculatedComponentWeights, setSumOfCalculatedComponentWeights] = useState<number | null>(null);
   const [totalStandardPercentage, setTotalStandardPercentage] = useState<number>(0);
 
-  // Step 1: Calculate Adjusted Total Batch Weight from Limiting Material
   useEffect(() => {
     const availWt = parseFloat(watchedAvailableLimitingMaterialWt);
     const ticketWt = parseFloat(watchedTicketLimitingMaterialWt);
     const origTotalWt = parseFloat(watchedOriginalStandardTotalBatchWt);
 
-    if (!isNaN(availWt) && !isNaN(ticketWt) && ticketWt > 0 && !isNaN(origTotalWt) && origTotalWt > 0 && availWt >=0) {
+    if (!isNaN(availWt) && !isNaN(ticketWt) && ticketWt > 0 && !isNaN(origTotalWt) && origTotalWt > 0 && availWt >= 0) {
       const adjustedWt = (availWt / ticketWt) * origTotalWt;
       setCalculatedAdjustedTotalBatchWeight(adjustedWt);
       
-      // Auto-fill Target Batch Weight in Part 2, but only if it's currently empty or was previously auto-filled
       if (!watchedTargetBatchWeightForComponents || watchedTargetBatchWeightForComponents === "") {
         setValue('targetBatchWeightForComponents', adjustedWt.toFixed(4));
       }
@@ -104,7 +87,6 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
     }
   }, [watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, setValue, watchedTargetBatchWeightForComponents]);
 
-  // Step 2: Calculate Breakdown based on Target Batch Weight
   useEffect(() => {
     const targetBatchWtNum = parseFloat(watchedTargetBatchWeightForComponents);
     let currentTotalPercentage = 0;
@@ -127,8 +109,6 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
         calculatedNewWeight = (validCompStdPerc / 100) * validTargetBatchWt;
         if (!isNaN(calculatedNewWeight) && isFinite(calculatedNewWeight)) {
              newSumOfWeights += calculatedNewWeight;
-        } else {
-            calculatedNewWeight = NaN; 
         }
       }
       
@@ -194,11 +174,6 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
     }
   };
 
-  const handleDeleteBatch = (batchId: string) => {
-    setSavedBatches(savedBatches.filter(b => b.id !== batchId));
-    toast({ title: "Configuration Deleted", description: "The selected formula has been removed." });
-  };
-
   const formula = "Part 1: Adj. Total Wt = (Avail. Limiting Wt / Ticket Limiting Wt) * Orig. Std. Total Wt. \nPart 2: New Comp. Wt = (Std. Comp. % / 100) * Target Batch Wt.";
 
   const resultsToCopy = useMemo(() => {
@@ -218,12 +193,23 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
     return text;
   }, [watchedAvailableLimitingMaterialWt, watchedTicketLimitingMaterialWt, watchedOriginalStandardTotalBatchWt, calculatedAdjustedTotalBatchWeight, watchedTargetBatchWeightForComponents, componentBreakdownResults, sumOfCalculatedComponentWeights]);
 
+  const voiceConfig = [
+    { id: 'availableLimitingMaterialWt', label: 'Available Amount of Limiting Material', onUpdate: (val: string) => setValue('availableLimitingMaterialWt', val) },
+    { id: 'ticketLimitingMaterialWt', label: 'Batch Ticket Amount of Limiting Material', onUpdate: (val: string) => setValue('ticketLimitingMaterialWt', val) },
+    { id: 'originalStandardTotalBatchWt', label: 'Original Standard Total Batch Weight', onUpdate: (val: string) => setValue('originalStandardTotalBatchWt', val) },
+    { id: 'targetBatchWeightForComponents', label: 'Target Batch Weight', onUpdate: (val: string) => setValue('targetBatchWeightForComponents', val) },
+  ];
+
+  const voiceResultText = calculatedAdjustedTotalBatchWeight !== null ? `The adjusted total batch weight is ${calculatedAdjustedTotalBatchWeight.toFixed(2)} units.` : undefined;
+
   return (
     <CalculatorWrapper
       title="Short Batch Adjustment Calculator"
       description="Calculates adjusted batch size based on a limiting material, then breaks down the new batch into component weights."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-8">
         <form onSubmit={handleSubmit(() => {})} className="space-y-8">
@@ -332,6 +318,42 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
             )}
           </section>
         </form>
+      </div>
+
+      <div className="mt-8 pt-6 border-t">
+        <h3 className="text-lg font-medium mb-3">Manage Saved Formulas</h3>
+        <div className="space-y-4 p-4 border rounded-md bg-muted/30">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-grow space-y-1.5 w-full">
+                <Label htmlFor="saveBatchName">Formula Name</Label>
+                <Input id="saveBatchName" {...register('saveBatchName')} placeholder="e.g., Ester Production A" />
+            </div>
+            <Button onClick={handleSaveBatch} size="sm" className="w-full md:w-auto" disabled={!watch('saveBatchName').trim() || watchedComponents.length === 0}>
+                <Save className="mr-2 h-4 w-4" /> Save Current
+            </Button>
+          </div>
+          {savedBatches.length > 0 && (
+             <div className="pt-4 border-t space-y-2">
+                <Label htmlFor="loadBatchSelect">Load Saved Formula</Label>
+                <div className="flex gap-2">
+                    <select
+                        id="loadBatchSelect"
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        value={selectedBatchToLoad}
+                        onChange={(e) => {
+                            setSelectedBatchToLoad(e.target.value);
+                            if(e.target.value) handleLoadBatch(e.target.value);
+                        }}
+                    >
+                        <option value="">Select a formula...</option>
+                        {savedBatches.map(batch => (
+                            <option key={batch.id} value={batch.id}>{batch.name}</option>
+                        ))}
+                    </select>
+                </div>
+             </div>
+          )}
+        </div>
       </div>
     </CalculatorWrapper>
   );

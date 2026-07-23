@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -30,8 +29,6 @@ const SaponificationValueCalculatorPage: React.FC = () => {
     const wt = parseFloat(sampleWeight);
 
     if (!isNaN(blank) && !isNaN(sample) && !isNaN(wt) && wt > 0) {
-      // Assuming 0.5N HCl for titration and KOH for saponification.
-      // Factor = Normality_HCl * MW_KOH = 0.5 * 56.1 = 28.05
       const sv = ((blank - sample) * 28.05) / wt;
       setSapValue(sv);
     } else {
@@ -49,12 +46,22 @@ Sample Weight: ${sampleWeight} g
 Saponification Value: ${sapValue.toFixed(3)}`;
   }, [blankTitrated, sampleTitrate, sampleWeight, sapValue]);
 
+  const voiceConfig = [
+    { id: 'blankTitrated', label: 'Blank Titrated Volume', onUpdate: (val: string) => setBlankTitrated(val) },
+    { id: 'sampleTitrate', label: 'Sample Titrate Volume', onUpdate: (val: string) => setSampleTitrate(val) },
+    { id: 'sampleWeightSap', label: 'Sample Weight', onUpdate: (val: string) => setSampleWeight(val) },
+  ];
+
+  const voiceResultText = sapValue !== null ? `The Saponification Value is ${sapValue.toFixed(3)}.` : undefined;
+
   return (
     <CalculatorWrapper
       title="Saponification (Sap) Value Calculator"
       description="Calculate the Saponification Value from titration data and sample weight."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -97,45 +104,17 @@ Saponification Value: ${sapValue.toFixed(3)}`;
             <DialogHeader>
               <DialogTitle className="text-xl">How to Use the Saponification Value Calculator</DialogTitle>
               <DialogDescription>
-                This calculator determines the Saponification Value (Sap Value), which is the number of milligrams of potassium hydroxide (KOH) required to saponify one gram of fat or oil.
+                Perform saponification calculations using voice or manual input.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
-              <section>
-                <h4 className="font-semibold text-md mb-2">1. Input Blank Titrated Volume</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the volume (in mL) of the titrant (commonly 0.5N hydrochloric acid, HCl) used for the blank titration. The blank undergoes the same saponification process but without the sample.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">40.0 mL</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">2. Input Sample Titrate Volume</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the volume (in mL) of the same titrant used for the titration of your sample after it has undergone saponification with alcoholic KOH.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">25.0 mL</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">3. Input Sample Weight</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the weight of the sample used for the analysis in grams (g).
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1.0 g</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">4. Understanding the Result</h4>
-                <p className="mb-1 text-muted-foreground">
-                  The calculator will display the "Saponification Value". The formula used is:
-                </p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <div className="text-muted-foreground">
-                  Where:
-                  <ul className="list-disc list-inside pl-4">
-                    <li>(Blank Titrated - Sample Titrate) is the difference in titrant volume.</li>
-                    <li>The factor 28.05 is derived from (Normality of HCl × Molecular weight of KOH). For 0.5N HCl, this is (0.5 × 56.108) ≈ 28.05. Ensure this factor matches your specific titrant normality.</li>
-                    <li>Sample Weight is in grams.</li>
-                  </ul>
-                </div>
+               <section>
+                <h4 className="font-semibold text-md mb-2">Voice Commands</h4>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
+                  <li>"Set blank titrated volume to forty"</li>
+                  <li>"Sample titrate volume is twenty five"</li>
+                  <li>"Read the result"</li>
+                </ul>
               </section>
             </div>
             <DialogFooter>

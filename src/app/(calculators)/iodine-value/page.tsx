@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -24,7 +23,7 @@ const IodineValueCalculatorPage: React.FC = () => {
   const [sampleWeight, setSampleWeight] = useState<string>('');
   const [iodineValue, setIodineValue] = useState<number | null>(null);
 
-  const FACTOR = 1.27; // Derived from (0.1 N Na2S2O3 * 12.69 g/equivalent of I) / 10 for % -> value
+  const FACTOR = 1.27; 
 
   useEffect(() => {
     const b = parseFloat(blank);
@@ -51,6 +50,14 @@ Sample Weight: ${sampleWeight} g
 Iodine Value: ${iodineValue.toFixed(3)}`;
   }, [blank, sample, sampleWeight, iodineValue]);
 
+  const voiceConfig = [
+    { id: 'blankIodine', label: 'Blank Titration', onUpdate: (val: string) => setBlank(val) },
+    { id: 'sampleIodine', label: 'Sample Titration', onUpdate: (val: string) => setSample(val) },
+    { id: 'sampleWeightIodine', label: 'Sample Weight', onUpdate: (val: string) => setSampleWeight(val) },
+  ];
+
+  const voiceResultText = iodineValue !== null ? `The Iodine Value is ${iodineValue.toFixed(3)}.` : undefined;
+
   return (
     <CalculatorWrapper
       title="Iodine Value Calculator"
@@ -58,6 +65,8 @@ Iodine Value: ${iodineValue.toFixed(3)}`;
       formula={formula}
       formulaTooltip={formulaTooltip}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -100,45 +109,17 @@ Iodine Value: ${iodineValue.toFixed(3)}`;
             <DialogHeader>
               <DialogTitle className="text-xl">How to Use the Iodine Value Calculator</DialogTitle>
               <DialogDescription>
-                This calculator determines the Iodine Value (IV), a measure of the unsaturation of fats and oils. It is expressed as the grams of iodine absorbed by 100 grams of the substance.
+                Use the mic icon to enter titration data via voice.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
-              <section>
-                <h4 className="font-semibold text-md mb-2">1. Input Blank Titration Volume</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the volume (in mL) of the titrant (commonly 0.1N sodium thiosulfate, Na₂S₂O₃) used for the blank titration. The blank is run without the sample but includes all reagents.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">30.0 mL</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">2. Input Sample Titration Volume</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the volume (in mL) of the same titrant used for the titration of your sample after it has reacted with an iodine solution (e.g., Wijs solution).
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">10.0 mL</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">3. Input Sample Weight</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the weight of the sample used for the analysis in grams (g).
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">0.3 g</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">4. Understanding the Result</h4>
-                <p className="mb-1 text-muted-foreground">
-                  The calculator will display the "Iodine Value". The formula used is:
-                </p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <div className="text-muted-foreground">
-                  Where:
-                  <ul className="list-disc list-inside pl-4">
-                    <li>(Blank - Sample) is the difference in titrant volume, representing the amount of iodine consumed by the sample.</li>
-                    <li>The factor <span className="font-mono">{FACTOR}</span> is typically derived from: (Normality of Thiosulfate × Atomic weight of Iodine × 100) / (1000 × 100) then simplified to get g Iodine per g sample for 100g basis. Or more directly (Normality of Thiosulfate × 12.69) when final result units are considered. For 0.1N Na₂S₂O₃, this factor is often 1.269 or rounded to {FACTOR}. Ensure this factor matches your specific laboratory procedure and titrant normality.</li>
-                    <li>Sample Weight is in grams.</li>
-                  </ul>
-                </div>
+               <section>
+                <h4 className="font-semibold text-md mb-2">Voice Commands</h4>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1 mb-4">
+                  <li>"Set blank titration to thirty"</li>
+                  <li>"Sample titration is ten point five"</li>
+                  <li>"Read the answer"</li>
+                </ul>
               </section>
             </div>
             <DialogFooter>

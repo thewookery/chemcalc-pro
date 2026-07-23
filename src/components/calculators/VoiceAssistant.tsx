@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Loader2, Volume2 } from 'lucide-react';
 import { parseVoiceCommand } from '@/ai/flows/voice-command-flow';
@@ -16,11 +16,13 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ fields, resultToRead })
   const { toast } = useToast();
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsListeningProcessing] = useState(false);
+  const [isSupported, setIsSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
+      setIsSupported(true);
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
@@ -56,7 +58,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ fields, resultToRead })
       };
 
       recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error', event.error);
         setIsListening(false);
         if (event.error !== 'no-speech') {
           toast({ variant: "destructive", title: "Microphone error", description: event.error });
@@ -85,8 +86,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ fields, resultToRead })
     }
   };
 
-  if (!recognitionRef.current && typeof window !== 'undefined') {
-    return null; // Browser doesn't support speech recognition
+  if (!isSupported) {
+    return null; 
   }
 
   return (

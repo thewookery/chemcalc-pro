@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -19,19 +18,17 @@ import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
 
 const StandardDilutionPage: React.FC = () => {
-  const [m1, setM1] = useState<string>(''); // Stock concentration
-  const [m2, setM2] = useState<string>(''); // Target concentration
-  const [v2, setV2] = useState<string>(''); // Final volume
-  const [v1, setV1] = useState<number | null>(null); // Volume of stock to use
-  const [waterToAdd, setWaterToAdd] = useState<number | null>(null); // Water to add
+  const [m1, setM1] = useState<string>(''); 
+  const [m2, setM2] = useState<string>(''); 
+  const [v2, setV2] = useState<string>(''); 
+  const [v1, setV1] = useState<number | null>(null); 
+  const [waterToAdd, setWaterToAdd] = useState<number | null>(null); 
 
   useEffect(() => {
     const stockConc = parseFloat(m1);
     const targetConc = parseFloat(m2);
     const finalVol = parseFloat(v2);
 
-    // Math: V1 = (M2 * V2) / M1
-    // Only valid if stockConc >= targetConc
     if (!isNaN(stockConc) && !isNaN(targetConc) && !isNaN(finalVol) && stockConc > 0 && finalVol > 0 && stockConc >= targetConc) {
       const volStock = (targetConc * finalVol) / stockConc;
       setV1(volStock);
@@ -56,6 +53,14 @@ Volume of Stock to Use (V1): ${v1.toFixed(4)}
 Water/Diluent to Add: ${waterToAdd.toFixed(4)}`;
   }, [m1, m2, v2, v1, waterToAdd]);
 
+  const voiceConfig = [
+    { id: 'm1', label: 'Stock Concentration', onUpdate: (val: string) => setM1(val) },
+    { id: 'm2', label: 'Target Concentration', onUpdate: (val: string) => setM2(val) },
+    { id: 'v2', label: 'Final Volume', onUpdate: (val: string) => setV2(val) },
+  ];
+
+  const voiceResultText = v1 !== null ? `Use ${v1.toFixed(2)} units of stock and add ${waterToAdd?.toFixed(2)} units of diluent.` : undefined;
+
   return (
     <CalculatorWrapper
       title="Standard Dilution Calculator (M1V1 = M2V2)"
@@ -63,6 +68,8 @@ Water/Diluent to Add: ${waterToAdd.toFixed(4)}`;
       formula={formula}
       formulaTooltip={formulaTooltip}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-4">
         <CommonInput
@@ -99,52 +106,22 @@ Water/Diluent to Add: ${waterToAdd.toFixed(4)}`;
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="w-full md:w-auto">
-              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use voice
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-xl">How to Use the Standard Dilution Calculator (M1V1 = M2V2)</DialogTitle>
-              <DialogDescription>
-                This calculator uses the M1V1 = M2V2 formula to determine how to dilute a stock solution to a desired target concentration and final volume.
-              </DialogDescription>
+              <DialogTitle className="text-xl">Standard Dilution Voice Control</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 text-sm py-4">
               <section>
-                <h4 className="font-semibold text-md mb-2">1. Input Stock Concentration (M1)</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the concentration of your starting stock solution. Ensure the unit (e.g., Molarity (M), percentage (%), ppm) is consistent with the "Target Concentration (M2)".
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">10 M</span> (or <span className="font-mono p-1 bg-background rounded">50 %</span>)</div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">2. Input Target Concentration (M2)</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the desired concentration of your final diluted solution. This value must be less than or equal to M1. Use the same unit as M1.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1 M</span> (or <span className="font-mono p-1 bg-background rounded">5 %</span>)</div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">3. Input Final Volume (V2)</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Enter the total volume of the diluted solution you want to prepare. Ensure the unit (e.g., mL, L) is consistent for calculated volumes.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">100 mL</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">4. Understanding the Results</h4>
-                <div className="mb-1 text-muted-foreground">
-                  The calculator will display:
-                  <ul className="list-disc list-inside pl-4">
-                    <li><strong>Volume of Stock to Use (V1):</strong> The amount of your stock solution (M1) needed.</li>
-                    <li><strong>Water/Diluent to Add:</strong> The amount of solvent (e.g., water) needed to reach the final volume (V2).</li>
-                  </ul>
-                </div>
-                <p className="mb-1 text-muted-foreground">The formulas used are:</p>
-                <code className="block my-1 p-2 bg-muted rounded text-xs font-mono">{formula}</code>
-                <p className="text-muted-foreground">
-                  Units for concentrations (M1, M2) must be the same. Units for volumes (V1, V2, Water/Diluent) will be the same as the input V2 unit.
-                </p>
+                <h4 className="font-semibold text-md mb-2">Voice Commands</h4>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
+                  <li>"Stock concentration is fifty percent"</li>
+                  <li>"Set target concentration to ten percent"</li>
+                  <li>"Final volume is five hundred mL"</li>
+                  <li>"Read the volumes"</li>
+                </ul>
               </section>
             </div>
             <DialogFooter>

@@ -136,6 +136,11 @@ const WasteStrippingOcrCalculatorLogic: React.FC = () => {
     return text;
   }, [batchWeight, ocrResult, finalNetWeight]);
 
+  const voiceConfig = [
+    { id: 'batchWeightOcr', label: 'Batch Weight', onUpdate: (val: string) => setBatchWeight(val) },
+  ];
+
+  const voiceResultText = finalNetWeight !== null ? `The final net weight is ${finalNetWeight.toFixed(2)} units.` : undefined;
 
   return (
     <CalculatorWrapper
@@ -143,6 +148,8 @@ const WasteStrippingOcrCalculatorLogic: React.FC = () => {
       description="Upload an image of handwritten waste and stripping weights. The AI will attempt to read them, and then calculate the net weight against your batch weight."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      voiceConfig={voiceConfig}
+      voiceResultText={voiceResultText}
     >
       <div className="space-y-6">
         <div className="space-y-2">
@@ -235,53 +242,16 @@ const WasteStrippingOcrCalculatorLogic: React.FC = () => {
         <Dialog>
           <DialogTrigger asChild>
             <Button variant="outline" size="sm" className="w-full md:w-auto">
-              <HelpCircle className="mr-2 h-4 w-4" /> How to use this calculator
+              <HelpCircle className="mr-2 h-4 w-4" /> How to use voice
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="text-xl">How to Use the Handwritten Weights OCR Calculator</DialogTitle>
+              <DialogTitle className="text-xl">Voice Control</DialogTitle>
               <DialogDescription>
-                This tool uses AI to read handwritten "Waste Weight" and "Stripping Weight" from an uploaded image, then subtracts them from a Batch Weight.
+                Try saying: "Batch weight is twelve hundred" or "Read the result".
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 text-sm py-4">
-              <section>
-                <h4 className="font-semibold text-md mb-2">1. Upload Image</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Click "Choose File" and select a clear image (PNG, JPG, WEBP, max 4MB) of the document containing the handwritten waste and stripping weights. For best results, ensure the handwriting is legible and the image is well-lit.
-                </p>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">2. Enter Batch Weight</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Input the total starting weight of your batch. This should be in the same units as the weights in the image.
-                </p>
-                <div className="my-1 p-2 text-xs bg-muted border border-dashed rounded-md text-foreground/80">e.g., <span className="font-mono p-1 bg-background rounded">1000 units</span></div>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">3. Analyze & Calculate</h4>
-                <p className="mb-1 text-muted-foreground">
-                  Click the "Analyze Image & Calculate" button. The AI will process the image. This may take a few seconds.
-                </p>
-              </section>
-              <section>
-                <h4 className="font-semibold text-md mb-2">4. Review Results</h4>
-                <ul className="list-disc list-inside space-y-1 pl-4 text-muted-foreground">
-                  <li><strong>Recognized Weights:</strong> The calculator will display the numbers it identified as "Waste Weight" and "Stripping Weight". If a value couldn't be read, it will show "N/A" or 0 in calculation.</li>
-                  <li><strong>Final Net Weight:</strong> This is calculated as: Batch Weight - Waste Weight - Stripping Weight.</li>
-                  <li><strong>Error Messages:</strong> If the AI encounters issues (e.g., unreadable image, no numbers found), an error or warning message will appear.</li>
-                </ul>
-                <p className="mt-2 text-muted-foreground">
-                  <strong>Note on Accuracy:</strong> OCR for handwriting can be challenging. Results may not always be 100% accurate. Always double-check critical values.
-                </p>
-              </section>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button">Close</Button>
-              </DialogClose>
-            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
