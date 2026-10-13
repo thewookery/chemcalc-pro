@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import type { DataConnection, Peer } from 'peerjs';
+import { generateRandomCode, cleanRoomCode } from '@/lib/roomCode';
 
 export type BridgeRole = 'host' | 'viewer' | null;
 
@@ -21,7 +22,7 @@ interface LiveBridgeContextType {
   roomCode: string;
   peerCount: number;
   lastMessage: BridgeMessage | null;
-  startHosting: () => Promise<string>;
+  startHosting: (desiredCode?: string) => Promise<string>;
   joinRoom: (code: string) => Promise<boolean>;
   disconnect: () => void;
   broadcast: (type: BridgeMessage['type'], payload: any) => void;
@@ -32,6 +33,7 @@ interface LiveBridgeContextType {
 const LiveBridgeContext = createContext<LiveBridgeContextType | null>(null);
 
 const PEER_PREFIX = 'chemcalc-room-';
+const SESSION_KEY = 'chemcalc_live_session_v2';
 
 const PEER_CONFIG = {
   config: {
@@ -48,23 +50,20 @@ const PEER_CONFIG = {
   pingInterval: 5000,
 };
 
-function generateRandomCode(): string {
-  const letters = ['LAB', 'QC', 'BATCH', 'CHEM', 'MIX'];
-  const prefix = letters[Math.floor(Math.random() * letters.length)];
-  const num = Math.floor(100 + Math.random() * 900);
-  return `${prefix}-${num}`;
-}
-
 function normalizePath(rawPath?: string | null): string {
   if (!rawPath) return '/';
   let p = rawPath;
   if (p.startsWith('/chemcalc-pro')) {
     p = p.slice('/chemcalc-pro'.length) || '/';
   }
-  if (p.length > 1 && p.endsWith('/')) {
-    p = p.slice(0, -1);
+  if (!p.startsWith('/')) {
+    p = `/${p}`;
   }
-  return p.startsWith('/') ? p : `/${p}`;
+  // Enforce trailing slash so Next.js static export never does a hard reload or 308 redirect
+  if (!p.endsWith('/')) {
+    p = `${p}/`;
+  }
+  return p;
 }
 
 export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -85,6 +84,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const isConnectedRef = useRef(false);
   const userManuallyDisconnectedRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
+  const lastNavigatedPathRef = useRef<string>('');
 
   // In-memory cache of synced state per calculator slug
   const syncedStateRef = useRef<Record<string, any>>({});
@@ -129,11 +129,20 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Broadcast route navigation to peers whenever pathname changes
   useEffect(() => {
     if (!isConnected) return;
+    const cleanCurrent = normalizePath(pathname);
+    
+    // If this navigation was triggered by a peer, don't echo back
     if (isNavigatingFromPeerRef.current) {
       isNavigatingFromPeerRef.current = false;
+      lastNavigatedPathRef.current = cleanCurrent;
       return;
     }
-    const cleanCurrent = normalizePath(pathname);
+
+    if (cleanCurrent === lastNavigatedPathRef.current) {
+      return;
+    }
+
+    lastNavigatedPathRef.current = cleanCurrent;
     broadcast('NAVIGATE', { pathname: cleanCurrent });
   }, [pathname, isConnected, broadcast]);
 
@@ -160,13 +169,14 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (msg.type === 'NAVIGATE' && msg.payload?.pathname) {
         const targetPath = normalizePath(msg.payload.pathname);
         const currentPath = normalizePath(pathname);
-        if (targetPath !== currentPath) {
+        if (targetPath !== currentPath && targetPath !== lastNavigatedPathRef.current) {
           isNavigatingFromPeerRef.current = true;
+          lastNavigatedPathRef.current = targetPath;
           try {
             router.push(targetPath);
             toast({
               title: "Navigated with Co-Pilot",
-              description: `Switched to ${targetPath === '/' ? 'Home' : targetPath.slice(1)}`,
+              description: `Switched to ${targetPath === '/' ? 'Home' : targetPath.replace(/\//g, '')}`,
             });
           } catch (err) {
             console.error('Failed to navigate via peer message:', err);
@@ -265,7 +275,6 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         console.warn('Peer connection error:', err);
       });
     },
-    // Note: callbacks read latest state from roleRef/roomCodeRef to prevent stale closure bugs
     [handleIncomingMessage, toast]
   );
 
@@ -273,6 +282,12 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const disconnect = useCallback(() => {
     userManuallyDisconnectedRef.current = true;
     reconnectAttemptsRef.current = 0;
+
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem(SESSION_KEY);
+      } catch {}
+    }
 
     connectionsRef.current.forEach((conn) => {
       try {
@@ -295,14 +310,14 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setPeerCount(0);
   }, []);
 
-  // Host a new session
-  const startHosting = useCallback(async (): Promise<string> => {
+  // Host a new session (qc + 3 numbers, e.g. qc482)
+  const startHosting = useCallback(async (desiredCode?: string): Promise<string> => {
     disconnect();
     userManuallyDisconnectedRef.current = false;
     setIsConnecting(true);
 
-    const code = generateRandomCode();
-    const peerId = `${PEER_PREFIX}${code.toLowerCase()}`;
+    const code = desiredCode ? cleanRoomCode(desiredCode) : generateRandomCode();
+    const peerId = `${PEER_PREFIX}${code}`;
 
     const { Peer } = await import('peerjs');
     const peer = new Peer(peerId, PEER_CONFIG);
@@ -314,6 +329,13 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setRole('host');
         setIsConnecting(false);
         setIsConnected(true);
+
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({ role: 'host', roomCode: code }));
+          } catch {}
+        }
+
         resolve(code);
       });
 
@@ -352,7 +374,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Join an existing session
   const joinRoom = useCallback(
     async (codeToJoin: string, isAutoRetry = false): Promise<boolean> => {
-      const cleanCode = codeToJoin.trim().toUpperCase();
+      const cleanCode = cleanRoomCode(codeToJoin);
       if (!cleanCode) return false;
 
       if (!isAutoRetry) {
@@ -361,7 +383,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setIsConnecting(true);
       }
 
-      const targetPeerId = `${PEER_PREFIX}${cleanCode.toLowerCase()}`;
+      const targetPeerId = `${PEER_PREFIX}${cleanCode}`;
 
       const { Peer } = await import('peerjs');
       const peer = new Peer(PEER_CONFIG);
@@ -378,6 +400,13 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           conn.on('open', () => {
             setRoomCode(cleanCode);
             setRole('viewer');
+
+            if (typeof window !== 'undefined') {
+              try {
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ role: 'viewer', roomCode: cleanCode }));
+              } catch {}
+            }
+
             resolve(true);
           });
 
@@ -422,6 +451,24 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     },
     [disconnect, setupConnection, toast]
   );
+
+  // Restore session from sessionStorage on page load or refresh
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw);
+        if (stored?.role && stored?.roomCode && !isConnectedRef.current) {
+          if (stored.role === 'host') {
+            startHosting(stored.roomCode);
+          } else if (stored.role === 'viewer') {
+            joinRoom(stored.roomCode);
+          }
+        }
+      }
+    } catch {}
+  }, [startHosting, joinRoom]);
 
   // Continuous active heartbeat (every 3 seconds) to prevent NAT/carrier timeout drops
   useEffect(() => {

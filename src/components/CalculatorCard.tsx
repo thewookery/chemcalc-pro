@@ -60,7 +60,7 @@ const CalculatorCard: React.FC<CalculatorCardProps> = ({
   const IconComponent = calculator.icon ? iconMap[calculator.icon] || iconMap['DefaultIcon'] : iconMap['DefaultIcon'];
 
   return (
-    <Link href={`/${calculator.slug}`} className="group block h-full focus:outline-none" aria-label={`Open ${calculator.name} calculator`}>
+    <Link href={`/${calculator.slug}/`} className="group block h-full focus:outline-none" aria-label={`Open ${calculator.name} calculator`}>
       <Card className="h-full flex flex-col justify-between transition-all duration-300 ease-in-out hover:shadow-xl hover:border-primary/50 group-hover:-translate-y-1">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between mb-3">

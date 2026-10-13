@@ -16,6 +16,7 @@ import { useLiveBridge } from '@/context/LiveBridgeContext';
 import { useToast } from '@/hooks/use-toast';
 import { Radio, Copy, Check, Users, PhoneCall, Loader2, Unlink } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
+import { cleanRoomCode } from '@/lib/roomCode';
 
 export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trigger }) => {
   const { isConnected, isConnecting, role, roomCode, peerCount, startHosting, joinRoom, disconnect } = useLiveBridge();
@@ -36,7 +37,8 @@ export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trig
 
   const handleJoin = async () => {
     if (!inputCode.trim()) return;
-    const success = await joinRoom(inputCode.trim());
+    const cleanCode = cleanRoomCode(inputCode.trim());
+    const success = await joinRoom(cleanCode);
     if (success) {
       setIsOpen(false);
     }
@@ -200,14 +202,14 @@ export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trig
             <TabsContent value="join" className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="room-code-input" className="text-xs font-medium text-foreground">
-                  Room Code (from colleague on the phone)
+                  Room Code (e.g. qc482 or just 482)
                 </label>
                 <Input
                   id="room-code-input"
-                  placeholder="e.g. LAB-832"
+                  placeholder="e.g. qc482"
                   value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                  className="text-center font-mono text-lg tracking-widest uppercase h-11"
+                  onChange={(e) => setInputCode(e.target.value)}
+                  className="text-center font-mono text-xl tracking-widest lowercase h-12 font-bold"
                   maxLength={10}
                 />
               </div>

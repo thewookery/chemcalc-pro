@@ -69,7 +69,7 @@ const AppHeader = () => {
                     {items.map((item) => (
                       <DropdownMenuItem
                         key={item.slug}
-                        onClick={() => router.push(`/${item.slug}`)}
+                        onClick={() => router.push(`/${item.slug}/`)}
                         className="text-xs cursor-pointer"
                       >
                         {item.name}
