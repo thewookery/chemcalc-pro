@@ -14,12 +14,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLiveBridge } from '@/context/LiveBridgeContext';
 import { useToast } from '@/hooks/use-toast';
-import { Radio, Copy, Check, Users, PhoneCall, Loader2, Unlink } from 'lucide-react';
+import { Radio, Copy, Check, Users, PhoneCall, Loader2, Unlink, Camera, CameraOff, Video } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { cleanRoomCode } from '@/lib/roomCode';
 
 export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trigger }) => {
-  const { isConnected, isConnecting, role, roomCode, peerCount, startHosting, joinRoom, disconnect } = useLiveBridge();
+  const {
+    isConnected,
+    isConnecting,
+    role,
+    roomCode,
+    peerCount,
+    startHosting,
+    joinRoom,
+    disconnect,
+    localStream,
+    remoteStream,
+    isSharingCamera,
+    startCameraShare,
+    stopCameraShare,
+    setVideoWindowOpen,
+  } = useLiveBridge();
   const { toast } = useToast();
 
   const [inputCode, setInputCode] = useState('');
@@ -128,6 +143,67 @@ export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trig
                 {copiedCode ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                 <span>{copiedCode ? "Code Copied" : "Copy Code"}</span>
               </Button>
+            </div>
+
+            {/* Batch Ticket Camera Stream Section */}
+            <div className="p-3.5 rounded-xl border bg-muted/40 dark:bg-muted/20 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Camera className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-semibold text-foreground">Batch Ticket Camera Feed</h4>
+                    <p className="text-[10px] text-muted-foreground">Audio-free stream in a floating resizable window</p>
+                  </div>
+                </div>
+                {remoteStream && (
+                  <span className="text-[10px] bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-medium px-2 py-0.5 rounded-full animate-pulse">
+                    Colleague Live
+                  </span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                {isSharingCamera ? (
+                  <Button
+                    onClick={stopCameraShare}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 gap-1.5"
+                  >
+                    <CameraOff className="h-3.5 w-3.5" />
+                    <span>Stop Sharing Camera</span>
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={async () => {
+                      const ok = await startCameraShare('environment');
+                      if (ok) setIsOpen(false);
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 gap-1.5"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>Share Phone / Device Camera</span>
+                  </Button>
+                )}
+                {(remoteStream || localStream) && (
+                  <Button
+                    onClick={() => {
+                      setVideoWindowOpen(true);
+                      setIsOpen(false);
+                    }}
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs gap-1"
+                  >
+                    <Video className="h-3.5 w-3.5" />
+                    <span>View Window</span>
+                  </Button>
+                )}
+              </div>
             </div>
 
             <p className="text-[11px] text-muted-foreground text-center">

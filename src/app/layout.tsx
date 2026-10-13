@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import AppHeader from '@/components/layout/AppHeader';
 import { LiveBridgeProvider } from '@/context/LiveBridgeContext';
 import { LiveBridgeStatusBar } from '@/components/bridge/LiveBridgeStatusBar';
+import { LiveBridgeCameraWindow } from '@/components/bridge/LiveBridgeCameraWindow';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const inter = Inter({ 
@@ -41,6 +42,7 @@ export default function RootLayout({
                 {children}
               </ErrorBoundary>
             </main>
+            <LiveBridgeCameraWindow />
             <Toaster />
           </LiveBridgeProvider>
         </ThemeProvider>

@@ -3,12 +3,25 @@
 import React, { useState } from 'react';
 import { useLiveBridge } from '@/context/LiveBridgeContext';
 import { Button } from '@/components/ui/button';
-import { Copy, Check, Unlink, Radio, Share2 } from 'lucide-react';
+import { Copy, Check, Unlink, Radio, Share2, Camera, CameraOff, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { copyToClipboard } from '@/lib/clipboard';
 
 export const LiveBridgeStatusBar: React.FC = () => {
-  const { isConnected, roomCode, role, peerCount, disconnect } = useLiveBridge();
+  const {
+    isConnected,
+    roomCode,
+    role,
+    peerCount,
+    disconnect,
+    localStream,
+    remoteStream,
+    isSharingCamera,
+    isVideoWindowOpen,
+    startCameraShare,
+    stopCameraShare,
+    setVideoWindowOpen,
+  } = useLiveBridge();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -45,6 +58,42 @@ export const LiveBridgeStatusBar: React.FC = () => {
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
+          {/* Camera controls */}
+          {remoteStream ? (
+            <Button
+              onClick={() => setVideoWindowOpen(true)}
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs text-white bg-emerald-700/80 hover:bg-emerald-700 gap-1.5 shadow-sm"
+              title="Colleague is sharing their camera feed"
+            >
+              <Video className="h-3 w-3 text-emerald-200 animate-pulse" />
+              <span>Colleague Camera</span>
+            </Button>
+          ) : isSharingCamera ? (
+            <Button
+              onClick={stopCameraShare}
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs text-white bg-rose-700/80 hover:bg-rose-700 gap-1.5 shadow-sm"
+              title="Stop streaming your camera"
+            >
+              <CameraOff className="h-3 w-3" />
+              <span>Stop Camera</span>
+            </Button>
+          ) : (
+            <Button
+              onClick={() => startCameraShare('environment')}
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2.5 text-xs text-white hover:bg-emerald-700/70 hover:text-white gap-1"
+              title="Share phone camera feed for batch tickets"
+            >
+              <Camera className="h-3 w-3" />
+              <span className="hidden sm:inline">Share Camera</span>
+            </Button>
+          )}
+
           <Button
             onClick={handleCopyLink}
             variant="ghost"

@@ -3,13 +3,22 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import type { DataConnection, Peer } from 'peerjs';
+import type { DataConnection, Peer, MediaConnection } from 'peerjs';
 import { generateRandomCode, cleanRoomCode } from '@/lib/roomCode';
 
 export type BridgeRole = 'host' | 'viewer' | null;
 
 export interface BridgeMessage {
-  type: 'NAVIGATE' | 'SYNC_CALC' | 'HIGHLIGHT' | 'CHAT_NOTE' | 'SYNC_REQUEST' | 'HEARTBEAT' | 'HEARTBEAT_ACK';
+  type:
+    | 'NAVIGATE'
+    | 'SYNC_CALC'
+    | 'HIGHLIGHT'
+    | 'CHAT_NOTE'
+    | 'SYNC_REQUEST'
+    | 'HEARTBEAT'
+    | 'HEARTBEAT_ACK'
+    | 'CAMERA_STARTED'
+    | 'CAMERA_STOPPED';
   payload: any;
   timestamp: number;
 }
@@ -28,6 +37,17 @@ interface LiveBridgeContextType {
   broadcast: (type: BridgeMessage['type'], payload: any) => void;
   syncCalculatorState: (slug: string, state: Record<string, any>) => void;
   getCalculatorState: (slug: string) => Record<string, any> | undefined;
+
+  // Video & Camera Batch Ticket Sharing
+  localStream: MediaStream | null;
+  remoteStream: MediaStream | null;
+  isSharingCamera: boolean;
+  isVideoWindowOpen: boolean;
+  cameraFacingMode: 'environment' | 'user';
+  startCameraShare: (facing?: 'environment' | 'user') => Promise<boolean>;
+  stopCameraShare: () => void;
+  switchCameraFacing: () => Promise<void>;
+  setVideoWindowOpen: (open: boolean) => void;
 }
 
 const LiveBridgeContext = createContext<LiveBridgeContextType | null>(null);
@@ -78,6 +98,13 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [peerCount, setPeerCount] = useState(0);
   const [lastMessage, setLastMessage] = useState<BridgeMessage | null>(null);
 
+  // Video Streaming State
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [isSharingCamera, setIsSharingCamera] = useState(false);
+  const [isVideoWindowOpen, setIsVideoWindowOpen] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState<'environment' | 'user'>('environment');
+
   // Synchronized refs to eliminate stale closures in WebRTC callbacks
   const roleRef = useRef<BridgeRole>(null);
   const roomCodeRef = useRef('');
@@ -85,6 +112,8 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const userManuallyDisconnectedRef = useRef(false);
   const reconnectAttemptsRef = useRef(0);
   const lastNavigatedPathRef = useRef<string>('');
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const activeMediaCallsRef = useRef<MediaConnection[]>([]);
 
   // In-memory cache of synced state per calculator slug
   const syncedStateRef = useRef<Record<string, any>>({});
@@ -130,7 +159,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (!isConnected) return;
     const cleanCurrent = normalizePath(pathname);
-    
+
     // If this navigation was triggered by a peer, don't echo back
     if (isNavigatingFromPeerRef.current) {
       isNavigatingFromPeerRef.current = false;
@@ -161,6 +190,15 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
 
       if (msg.type === 'HEARTBEAT_ACK') {
+        return;
+      }
+
+      if (msg.type === 'CAMERA_STOPPED') {
+        setRemoteStream(null);
+        toast({
+          title: "Camera Feed Ended",
+          description: "Colleague stopped sharing camera.",
+        });
         return;
       }
 
@@ -235,6 +273,19 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             timestamp: Date.now(),
           });
         } catch {}
+
+        // If we are currently sharing our camera, automatically call this newly connected peer
+        if (localStreamRef.current && peerRef.current) {
+          try {
+            const call = peerRef.current.call(conn.peer, localStreamRef.current);
+            activeMediaCallsRef.current.push(call);
+            call.on('stream', (rStream) => {
+              setRemoteStream(rStream);
+            });
+          } catch (e) {
+            console.warn('Could not call newcomer with existing video stream:', e);
+          }
+        }
       });
 
       conn.on('data', (data: any) => {
@@ -278,10 +329,137 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     [handleIncomingMessage, toast]
   );
 
+  // Setup incoming video call handler on peer instance
+  const setupMediaCallHandler = useCallback((peer: Peer) => {
+    peer.on('call', (incomingCall) => {
+      console.log('Incoming video stream call from peer:', incomingCall.peer);
+      // Answer with localStream if sharing, or empty if only viewing
+      incomingCall.answer(localStreamRef.current || undefined);
+      activeMediaCallsRef.current.push(incomingCall);
+
+      incomingCall.on('stream', (stream) => {
+        console.log('Received remote media stream');
+        setRemoteStream(stream);
+        setIsVideoWindowOpen(true);
+        toast({
+          title: "📹 Camera Feed Connected",
+          description: "Batch ticket camera stream is now active.",
+        });
+      });
+
+      incomingCall.on('close', () => {
+        setRemoteStream(null);
+      });
+
+      incomingCall.on('error', (err) => {
+        console.warn('Incoming media call error:', err);
+      });
+    });
+  }, [toast]);
+
+  // Start sharing camera feed (front or rear camera)
+  const startCameraShare = useCallback(
+    async (facing: 'environment' | 'user' = cameraFacingMode): Promise<boolean> => {
+      if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+        toast({
+          title: "Camera Not Available",
+          description: "Browser does not support camera access.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      try {
+        // Stop any existing tracks
+        if (localStreamRef.current) {
+          localStreamRef.current.getTracks().forEach((track) => track.stop());
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false, // Keep audio false to avoid acoustic echo on phone calls
+        });
+
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        setIsSharingCamera(true);
+        setCameraFacingMode(facing);
+        setIsVideoWindowOpen(true);
+
+        // Call all connected peers to transmit the video stream
+        connectionsRef.current.forEach((conn) => {
+          if (conn.open && peerRef.current) {
+            try {
+              const call = peerRef.current.call(conn.peer, stream);
+              activeMediaCallsRef.current.push(call);
+              call.on('stream', (rStream) => {
+                setRemoteStream(rStream);
+              });
+              call.on('close', () => {
+                console.log('Outgoing media call closed');
+              });
+            } catch (err) {
+              console.error('Failed to call peer with video:', err);
+            }
+          }
+        });
+
+        broadcast('CAMERA_STARTED', { facing });
+        toast({
+          title: "Camera Sharing Started",
+          description: "Point your camera at the batch ticket or lab scale.",
+        });
+        return true;
+      } catch (err: any) {
+        console.error('getUserMedia error:', err);
+        toast({
+          title: "Camera Access Error",
+          description: "Could not access device camera. Check permissions.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    },
+    [cameraFacingMode, broadcast, toast]
+  );
+
+  // Stop sharing camera feed
+  const stopCameraShare = useCallback(() => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+    setLocalStream(null);
+    setIsSharingCamera(false);
+
+    activeMediaCallsRef.current.forEach((call) => {
+      try {
+        call.close();
+      } catch {}
+    });
+    activeMediaCallsRef.current = [];
+
+    broadcast('CAMERA_STOPPED', {});
+  }, [broadcast]);
+
+  // Flip / switch between rear (environment) and front (user) camera
+  const switchCameraFacing = useCallback(async () => {
+    const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
+    await startCameraShare(nextFacing);
+  }, [cameraFacingMode, startCameraShare]);
+
   // Disconnect function
   const disconnect = useCallback(() => {
     userManuallyDisconnectedRef.current = true;
     reconnectAttemptsRef.current = 0;
+
+    stopCameraShare();
+    setRemoteStream(null);
+    setIsVideoWindowOpen(false);
 
     if (typeof window !== 'undefined') {
       try {
@@ -308,7 +486,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setRole(null);
     setRoomCode('');
     setPeerCount(0);
-  }, []);
+  }, [stopCameraShare]);
 
   // Host a new session (qc + 3 numbers, e.g. qc482)
   const startHosting = useCallback(async (desiredCode?: string): Promise<string> => {
@@ -343,6 +521,8 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setupConnection(conn);
       });
 
+      setupMediaCallHandler(peer);
+
       // Auto-reconnect signaling broker if temporarily disconnected
       peer.on('disconnected', () => {
         console.log('Host broker disconnected. Reconnecting to signaling broker...');
@@ -369,7 +549,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         }
       });
     });
-  }, [disconnect, setupConnection, toast]);
+  }, [disconnect, setupConnection, setupMediaCallHandler, toast]);
 
   // Join an existing session
   const joinRoom = useCallback(
@@ -426,6 +606,8 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           }, 8000);
         });
 
+        setupMediaCallHandler(peer);
+
         peer.on('disconnected', () => {
           console.log('Viewer broker disconnected. Reconnecting to signaling broker...');
           if (!peer.destroyed && !userManuallyDisconnectedRef.current) {
@@ -449,7 +631,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
       });
     },
-    [disconnect, setupConnection, toast]
+    [disconnect, setupConnection, setupMediaCallHandler, toast]
   );
 
   // Restore session from sessionStorage on page load or refresh
@@ -548,6 +730,15 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         broadcast,
         syncCalculatorState,
         getCalculatorState,
+        localStream,
+        remoteStream,
+        isSharingCamera,
+        isVideoWindowOpen,
+        cameraFacingMode,
+        startCameraShare,
+        stopCameraShare,
+        switchCameraFacing,
+        setVideoWindowOpen: setIsVideoWindowOpen,
       }}
     >
       {children}
