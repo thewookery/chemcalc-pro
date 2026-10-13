@@ -7,7 +7,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  output: 'export',
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || '',
+  trailingSlash: true,
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
