@@ -8,7 +8,7 @@ import type { DataConnection, Peer } from 'peerjs';
 export type BridgeRole = 'host' | 'viewer' | null;
 
 export interface BridgeMessage {
-  type: 'NAVIGATE' | 'SYNC_CALC' | 'HIGHLIGHT' | 'CHAT_NOTE' | 'SYNC_REQUEST';
+  type: 'NAVIGATE' | 'SYNC_CALC' | 'HIGHLIGHT' | 'CHAT_NOTE' | 'SYNC_REQUEST' | 'HEARTBEAT' | 'HEARTBEAT_ACK';
   payload: any;
   timestamp: number;
 }
@@ -32,6 +32,21 @@ interface LiveBridgeContextType {
 const LiveBridgeContext = createContext<LiveBridgeContextType | null>(null);
 
 const PEER_PREFIX = 'chemcalc-room-';
+
+const PEER_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' },
+    ],
+    iceCandidatePoolSize: 10,
+  },
+  pingInterval: 5000,
+};
 
 function generateRandomCode(): string {
   const letters = ['LAB', 'QC', 'BATCH', 'CHEM', 'MIX'];
@@ -64,6 +79,13 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [peerCount, setPeerCount] = useState(0);
   const [lastMessage, setLastMessage] = useState<BridgeMessage | null>(null);
 
+  // Synchronized refs to eliminate stale closures in WebRTC callbacks
+  const roleRef = useRef<BridgeRole>(null);
+  const roomCodeRef = useRef('');
+  const isConnectedRef = useRef(false);
+  const userManuallyDisconnectedRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+
   // In-memory cache of synced state per calculator slug
   const syncedStateRef = useRef<Record<string, any>>({});
 
@@ -71,6 +93,19 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const connectionsRef = useRef<DataConnection[]>([]);
   const isNavigatingFromPeerRef = useRef(false);
   const hasAutoJoinedRef = useRef(false);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    roleRef.current = role;
+  }, [role]);
+
+  useEffect(() => {
+    roomCodeRef.current = roomCode;
+  }, [roomCode]);
+
+  useEffect(() => {
+    isConnectedRef.current = isConnected;
+  }, [isConnected]);
 
   // Broadcast to all active connections
   const broadcast = useCallback((type: BridgeMessage['type'], payload: any) => {
@@ -105,6 +140,21 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Handle incoming message from peer
   const handleIncomingMessage = useCallback(
     (msg: BridgeMessage, conn: DataConnection) => {
+      if (msg.type === 'HEARTBEAT') {
+        try {
+          conn.send({
+            type: 'HEARTBEAT_ACK',
+            payload: null,
+            timestamp: Date.now(),
+          });
+        } catch {}
+        return;
+      }
+
+      if (msg.type === 'HEARTBEAT_ACK') {
+        return;
+      }
+
       setLastMessage(msg);
 
       if (msg.type === 'NAVIGATE' && msg.payload?.pathname) {
@@ -149,16 +199,18 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     [pathname, router, toast]
   );
 
-  // Set up connection event listeners
+  // Setup connection lifecycle and listeners
   const setupConnection = useCallback(
     (conn: DataConnection) => {
       conn.on('open', () => {
         if (!connectionsRef.current.some((c) => c.peer === conn.peer)) {
           connectionsRef.current.push(conn);
         }
-        setPeerCount(connectionsRef.current.filter((c) => c.open).length);
+        const openPeers = connectionsRef.current.filter((c) => c.open).length;
+        setPeerCount(openPeers);
         setIsConnected(true);
         setIsConnecting(false);
+        reconnectAttemptsRef.current = 0;
 
         toast({
           title: "📡 Peer Connected!",
@@ -166,11 +218,13 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         });
 
         // Request initial state
-        conn.send({
-          type: 'SYNC_REQUEST',
-          payload: null,
-          timestamp: Date.now(),
-        });
+        try {
+          conn.send({
+            type: 'SYNC_REQUEST',
+            payload: null,
+            timestamp: Date.now(),
+          });
+        } catch {}
       });
 
       conn.on('data', (data: any) => {
@@ -179,26 +233,47 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       conn.on('close', () => {
         connectionsRef.current = connectionsRef.current.filter((c) => c.peer !== conn.peer);
-        setPeerCount(connectionsRef.current.filter((c) => c.open).length);
-        if (connectionsRef.current.length === 0 && role === 'viewer') {
-          setIsConnected(false);
-          toast({
-            title: "Peer Disconnected",
-            description: "The live bridge session has ended.",
-            variant: "destructive",
-          });
+        const openPeers = connectionsRef.current.filter((c) => c.open).length;
+        setPeerCount(openPeers);
+
+        // If viewer lost connection and did NOT manually disconnect: try auto-reconnecting
+        if (openPeers === 0 && roleRef.current === 'viewer' && !userManuallyDisconnectedRef.current) {
+          if (reconnectAttemptsRef.current < 4 && roomCodeRef.current) {
+            reconnectAttemptsRef.current += 1;
+            console.log(`Connection dropped. Reconnecting attempt ${reconnectAttemptsRef.current}...`);
+            toast({
+              title: "Reconnecting Bridge...",
+              description: `Network blip detected. Reconnecting to ${roomCodeRef.current}...`,
+            });
+            setTimeout(() => {
+              if (!userManuallyDisconnectedRef.current && roomCodeRef.current) {
+                joinRoom(roomCodeRef.current, true);
+              }
+            }, 1200);
+          } else {
+            setIsConnected(false);
+            toast({
+              title: "Peer Disconnected",
+              description: "The live bridge session has ended.",
+              variant: "destructive",
+            });
+          }
         }
       });
 
       conn.on('error', (err) => {
-        console.error('Connection error:', err);
+        console.warn('Peer connection error:', err);
       });
     },
-    [handleIncomingMessage, role, toast]
+    // Note: callbacks read latest state from roleRef/roomCodeRef to prevent stale closure bugs
+    [handleIncomingMessage, toast]
   );
 
   // Disconnect function
   const disconnect = useCallback(() => {
+    userManuallyDisconnectedRef.current = true;
+    reconnectAttemptsRef.current = 0;
+
     connectionsRef.current.forEach((conn) => {
       try {
         conn.close();
@@ -223,14 +298,14 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Host a new session
   const startHosting = useCallback(async (): Promise<string> => {
     disconnect();
+    userManuallyDisconnectedRef.current = false;
     setIsConnecting(true);
 
     const code = generateRandomCode();
     const peerId = `${PEER_PREFIX}${code.toLowerCase()}`;
 
-    // Dynamically import PeerJS on client
     const { Peer } = await import('peerjs');
-    const peer = new Peer(peerId);
+    const peer = new Peer(peerId, PEER_CONFIG);
     peerRef.current = peer;
 
     return new Promise((resolve, reject) => {
@@ -246,8 +321,18 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setupConnection(conn);
       });
 
+      // Auto-reconnect signaling broker if temporarily disconnected
+      peer.on('disconnected', () => {
+        console.log('Host broker disconnected. Reconnecting to signaling broker...');
+        if (!peer.destroyed && !userManuallyDisconnectedRef.current) {
+          try {
+            peer.reconnect();
+          } catch {}
+        }
+      });
+
       peer.on('error', (err: any) => {
-        console.error('Peer error:', err);
+        console.error('Peer host error:', err);
         setIsConnecting(false);
         if (err.type === 'unavailable-id') {
           // Retry with new code if collision
@@ -255,7 +340,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         } else {
           toast({
             title: "Connection Error",
-            description: "Could not create room on public broker. Please retry.",
+            description: "Could not create room on broker. Please retry.",
             variant: "destructive",
           });
           reject(err);
@@ -266,23 +351,28 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Join an existing session
   const joinRoom = useCallback(
-    async (codeToJoin: string): Promise<boolean> => {
+    async (codeToJoin: string, isAutoRetry = false): Promise<boolean> => {
       const cleanCode = codeToJoin.trim().toUpperCase();
       if (!cleanCode) return false;
 
-      disconnect();
-      setIsConnecting(true);
+      if (!isAutoRetry) {
+        disconnect();
+        userManuallyDisconnectedRef.current = false;
+        setIsConnecting(true);
+      }
 
       const targetPeerId = `${PEER_PREFIX}${cleanCode.toLowerCase()}`;
 
-      // Dynamically import PeerJS
       const { Peer } = await import('peerjs');
-      const peer = new Peer(); // Random joiner ID
+      const peer = new Peer(PEER_CONFIG);
       peerRef.current = peer;
 
       return new Promise((resolve) => {
         peer.on('open', () => {
-          const conn = peer.connect(targetPeerId, { reliable: true });
+          const conn = peer.connect(targetPeerId, {
+            reliable: true,
+            serialization: 'json',
+          });
           setupConnection(conn);
 
           conn.on('open', () => {
@@ -294,31 +384,80 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           // Timeout fallback if host is not reachable
           setTimeout(() => {
             if (!conn.open) {
-              setIsConnecting(false);
-              toast({
-                title: "Room Not Found",
-                description: `Could not connect to room "${cleanCode}". Make sure the host is currently in the session.`,
-                variant: "destructive",
-              });
+              if (!isAutoRetry) {
+                setIsConnecting(false);
+                toast({
+                  title: "Room Not Found",
+                  description: `Could not connect to room "${cleanCode}". Make sure the host is currently in the session.`,
+                  variant: "destructive",
+                });
+              }
               resolve(false);
             }
-          }, 7000);
+          }, 8000);
+        });
+
+        peer.on('disconnected', () => {
+          console.log('Viewer broker disconnected. Reconnecting to signaling broker...');
+          if (!peer.destroyed && !userManuallyDisconnectedRef.current) {
+            try {
+              peer.reconnect();
+            } catch {}
+          }
         });
 
         peer.on('error', (err) => {
           console.error('Join error:', err);
-          setIsConnecting(false);
-          toast({
-            title: "Connection Failed",
-            description: "Unable to connect to room. Check code and try again.",
-            variant: "destructive",
-          });
+          if (!isAutoRetry) {
+            setIsConnecting(false);
+            toast({
+              title: "Connection Failed",
+              description: "Unable to connect to room. Check code and try again.",
+              variant: "destructive",
+            });
+          }
           resolve(false);
         });
       });
     },
     [disconnect, setupConnection, toast]
   );
+
+  // Continuous active heartbeat (every 3 seconds) to prevent NAT/carrier timeout drops
+  useEffect(() => {
+    if (!isConnected) return;
+    const heartbeatTimer = setInterval(() => {
+      connectionsRef.current.forEach((conn) => {
+        if (conn.open) {
+          try {
+            conn.send({
+              type: 'HEARTBEAT',
+              payload: null,
+              timestamp: Date.now(),
+            });
+          } catch {}
+        }
+      });
+    }, 3000);
+
+    return () => clearInterval(heartbeatTimer);
+  }, [isConnected]);
+
+  // Page visibility recovery (e.g. mobile screen off or switching tabs during phone call)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        if (peerRef.current && peerRef.current.disconnected && !peerRef.current.destroyed) {
+          try {
+            peerRef.current.reconnect();
+          } catch {}
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Sync calculator state helper
   const syncCalculatorState = useCallback(
