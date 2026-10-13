@@ -317,7 +317,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
       newPart2Results.push({
         name: compFromPart1.name,
         excessUnits: isNaN(excessUnits) ? NaN : excessUnits,
-        avOrOhValue: isNaN(avOrOh) ? NaN : avOhVal,
+        avOrOhValue: isNaN(avOrOh) ? NaN : avOrOh,
         percentageOfAdd: percentageOfAdd,
         unitsForBatchWeight: unitsForBatchWeightCalc,
       });
