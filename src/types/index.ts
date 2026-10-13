@@ -3,7 +3,9 @@ export interface CalculatorMeta {
   slug: string;
   name: string;
   description: string;
-  icon?: string; // Changed from React.ElementType to string (icon name)
+  icon?: string;
+  category: 'Titration & Analysis' | 'Batch Adjustments' | 'Trials & Formulations' | 'General Math';
+  formulaBadge?: string;
 }
 
 // For use in the Short Batch Adjustment calculator results
