@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CALCULATORS, CATEGORIES } from '@/lib/calculators';
+import { LiveBridgeDialog } from '@/components/bridge/LiveBridgeDialog';
 
 const AppHeader = () => {
   const router = useRouter();
@@ -39,6 +40,9 @@ const AppHeader = () => {
 
         {/* Right Navigation & Tools */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Live Bridge Co-Pilot Button */}
+          <LiveBridgeDialog />
+
           {/* Quick Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -4,6 +4,8 @@ import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { Toaster } from '@/components/ui/toaster';
 import AppHeader from '@/components/layout/AppHeader';
+import { LiveBridgeProvider } from '@/context/LiveBridgeContext';
+import { LiveBridgeStatusBar } from '@/components/bridge/LiveBridgeStatusBar';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -30,11 +32,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AppHeader />
-          <main className="flex-grow container mx-auto px-4 py-8 animate-slideUp">
-            {children}
-          </main>
-          <Toaster />
+          <LiveBridgeProvider>
+            <AppHeader />
+            <LiveBridgeStatusBar />
+            <main className="flex-grow container mx-auto px-4 py-8 animate-slideUp">
+              {children}
+            </main>
+            <Toaster />
+          </LiveBridgeProvider>
         </ThemeProvider>
       </body>
     </html>

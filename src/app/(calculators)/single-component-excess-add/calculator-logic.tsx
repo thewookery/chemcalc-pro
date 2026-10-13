@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 import { materialsList, type Material } from '@/lib/materials';
 import {
   Dialog,
@@ -128,12 +129,31 @@ const SingleComponentExcessAddCalculatorLogic: React.FC = () => {
 
   const materialValueTooltip = "Enter the Acid Value (AV) or Hydroxyl Value (OH) of the material. This value must not be zero. You can select from a predefined list or type a custom value.";
 
+  const liveData = useMemo(() => ({
+    unitsToAdd,
+    materialValue,
+    batchWeight,
+    comboboxInputValue,
+  }), [unitsToAdd, materialValue, batchWeight, comboboxInputValue]);
+
+  const { getSnapshotUrl } = useLiveCalculatorSync(
+    'single-component-excess-add',
+    liveData,
+    (remoteData) => {
+      if (remoteData.unitsToAdd !== undefined) setUnitsToAdd(remoteData.unitsToAdd);
+      if (remoteData.materialValue !== undefined) setMaterialValue(remoteData.materialValue);
+      if (remoteData.batchWeight !== undefined) setBatchWeight(remoteData.batchWeight);
+      if (remoteData.comboboxInputValue !== undefined) setComboboxInputValue(remoteData.comboboxInputValue);
+    }
+  );
+
   return (
     <CalculatorWrapper
       title="Single Component Excess Add Calculator"
       description="Calculate the percentage of a single component (e.g., acid or alcohol) to add to a batch based on the units needed, the material's AV/OH, and the total batch weight."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Trash2, PlusCircle, Check, ChevronsUpDown, Save, Upload, AlertTriangle, HelpCircle } from 'lucide-react';
 import type { BatchTicketComponentInput, CalculatedExcessComponent, Part2CalculatedValueComponent, SavedBatch } from '@/types';
 import { Separator } from '@/components/ui/separator';
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 import { cn } from '@/lib/utils';
 import { materialsList, type Material } from '@/lib/materials';
 import {
@@ -446,6 +447,22 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
     toast({ title: "Formula Deleted", description: "The selected formula has been removed." });
   };
 
+  const liveSyncData = useMemo(() => ({
+    targetBatchWeight: watchedTargetBatchWeight,
+    totalExcessUnitsToAdd: watchedTotalExcessUnitsToAdd,
+    components: watchedComponents,
+  }), [watchedTargetBatchWeight, watchedTotalExcessUnitsToAdd, watchedComponents]);
+
+  const { getSnapshotUrl } = useLiveCalculatorSync(
+    'multiple-components-excess-add',
+    liveSyncData,
+    (remoteData) => {
+      if (remoteData) {
+        reset(remoteData);
+      }
+    }
+  );
+
   const sumOfStandardizedPercentageClass = Math.abs(sumOfStandardizedPercentage - 100) < 0.001 ? 'text-green-600 dark:text-green-400' : 'text-destructive';
 
   return (
@@ -454,6 +471,7 @@ const MultipleComponentsCalculatorLogic: React.FC = () => {
       description="Define components, calculate excess additions, and determine full batch component weights based on a target batch size."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      onShareSnapshot={getSnapshotUrl}
     >
       <form onSubmit={handleSubmit(() => {})} className="space-y-8">
         

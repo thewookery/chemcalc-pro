@@ -16,11 +16,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const AcidValueCalculatorPage: React.FC = () => {
   const [mlTitrated, setMlTitrated] = useState<string>('');
   const [sampleWeight, setSampleWeight] = useState<string>('');
   const [acidValue, setAcidValue] = useState<number | null>(null);
+
+  const liveData = useMemo(() => ({ mlTitrated, sampleWeight }), [mlTitrated, sampleWeight]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('acid-value', liveData, (remote) => {
+    if (remote.mlTitrated !== undefined) setMlTitrated(remote.mlTitrated);
+    if (remote.sampleWeight !== undefined) setSampleWeight(remote.sampleWeight);
+  });
 
   useEffect(() => {
     const ml = parseFloat(mlTitrated);
@@ -58,6 +65,7 @@ Acid Value: ${acidValue.toFixed(3)}`;
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

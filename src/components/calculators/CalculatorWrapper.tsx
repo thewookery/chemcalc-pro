@@ -1,6 +1,6 @@
 "use client";
 
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -14,10 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Copy, HelpCircle, ArrowLeft, ArrowUpDown } from 'lucide-react';
+import { Copy, Check, HelpCircle, ArrowLeft, ArrowUpDown, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import VoiceAssistant from './VoiceAssistant';
 import { CALCULATORS, CATEGORIES } from '@/lib/calculators';
+import { LiveBridgeDialog } from '@/components/bridge/LiveBridgeDialog';
 
 interface CalculatorWrapperProps {
   title: string;
@@ -28,6 +29,7 @@ interface CalculatorWrapperProps {
   resultsToCopy?: string | (() => string);
   voiceConfig?: { id: string; label: string; onUpdate: (val: string) => void }[];
   voiceResultText?: string;
+  onShareSnapshot?: () => string;
 }
 
 const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
@@ -39,9 +41,12 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
   resultsToCopy,
   voiceConfig,
   voiceResultText,
+  onShareSnapshot,
 }) => {
   const { toast } = useToast();
   const router = useRouter();
+  const [copiedResults, setCopiedResults] = useState(false);
+  const [copiedSnapshot, setCopiedSnapshot] = useState(false);
 
   const handleCopyToClipboard = () => {
     if (!resultsToCopy) return;
@@ -49,10 +54,12 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
     navigator.clipboard
       .writeText(textToCopy)
       .then(() => {
+        setCopiedResults(true);
         toast({
           title: "Copied to clipboard!",
           description: "Calculation results copied.",
         });
+        setTimeout(() => setCopiedResults(false), 2000);
       })
       .catch(() => {
         toast({
@@ -63,10 +70,23 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
       });
   };
 
+  const handleShareSnapshot = () => {
+    if (!onShareSnapshot) return;
+    const url = onShareSnapshot();
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedSnapshot(true);
+      toast({
+        title: "Share Link Generated!",
+        description: "Anyone opening this link will see your exact inputs pre-filled.",
+      });
+      setTimeout(() => setCopiedSnapshot(false), 2500);
+    });
+  };
+
   return (
     <div className="w-full max-w-3xl mx-auto space-y-4 animate-slideUp">
       {/* Top Navigation & Quick Switcher Bar */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex items-center justify-between px-1 gap-2 flex-wrap">
         <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
           <Link href="/">
             <ArrowLeft className="h-4 w-4" />
@@ -74,38 +94,42 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
           </Link>
         </Button>
 
-        {/* Quick Calculator Switcher Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-              <ArrowUpDown className="h-3.5 w-3.5" />
-              <span>Switch Tool</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
-            {CATEGORIES.filter((c) => c !== 'All').map((category) => {
-              const items = CALCULATORS.filter((c) => c.category === category);
-              if (items.length === 0) return null;
-              return (
-                <React.Fragment key={category}>
-                  <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    {category}
-                  </DropdownMenuLabel>
-                  {items.map((item) => (
-                    <DropdownMenuItem
-                      key={item.slug}
-                      onClick={() => router.push(`/${item.slug}`)}
-                      className="text-xs cursor-pointer"
-                    >
-                      {item.name}
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator />
-                </React.Fragment>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Co-Pilot Bridge & Quick Switcher */}
+        <div className="flex items-center gap-2">
+          <LiveBridgeDialog />
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                <span>Switch Tool</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 max-h-96 overflow-y-auto">
+              {CATEGORIES.filter((c) => c !== 'All').map((category) => {
+                const items = CALCULATORS.filter((c) => c.category === category);
+                if (items.length === 0) return null;
+                return (
+                  <React.Fragment key={category}>
+                    <DropdownMenuLabel className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      {category}
+                    </DropdownMenuLabel>
+                    {items.map((item) => (
+                      <DropdownMenuItem
+                        key={item.slug}
+                        onClick={() => router.push(`/${item.slug}`)}
+                        className="text-xs cursor-pointer"
+                      >
+                        {item.name}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator />
+                  </React.Fragment>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Main Calculator Card */}
@@ -126,7 +150,7 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
 
         <CardContent className="space-y-6">{children}</CardContent>
 
-        {(formula || resultsToCopy) && (
+        {(formula || resultsToCopy || onShareSnapshot) && (
           <CardFooter className="flex flex-col items-start gap-4 pt-5 border-t bg-muted/20">
             {formula && (
               <div className="text-sm text-muted-foreground w-full">
@@ -152,12 +176,22 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
                 </code>
               </div>
             )}
-            {resultsToCopy && (
-              <Button onClick={handleCopyToClipboard} variant="outline" size="sm" className="gap-2">
-                <Copy className="h-4 w-4" />
-                Copy Results
-              </Button>
-            )}
+
+            <div className="flex items-center gap-2 flex-wrap pt-1">
+              {resultsToCopy && (
+                <Button onClick={handleCopyToClipboard} variant="outline" size="sm" className="gap-2">
+                  {copiedResults ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                  <span>{copiedResults ? "Copied" : "Copy Results"}</span>
+                </Button>
+              )}
+
+              {onShareSnapshot && (
+                <Button onClick={handleShareSnapshot} variant="outline" size="sm" className="gap-2">
+                  {copiedSnapshot ? <Check className="h-4 w-4 text-emerald-500" /> : <Share2 className="h-4 w-4" />}
+                  <span>{copiedSnapshot ? "Link Copied!" : "Share Snapshot Link"}</span>
+                </Button>
+              )}
+            </div>
           </CardFooter>
         )}
       </Card>

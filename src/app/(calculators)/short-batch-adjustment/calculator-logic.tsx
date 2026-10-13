@@ -15,6 +15,7 @@ import useLocalStorage from '@/hooks/useLocalStorage';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 import {
   Dialog,
   DialogClose,
@@ -200,6 +201,30 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
     { id: 'targetBatchWeightForComponents', label: 'Target Batch Weight', onUpdate: (val: string) => setValue('targetBatchWeightForComponents', val) },
   ];
 
+  const liveSyncData = useMemo(() => ({
+    availableLimitingMaterialWt: watchedAvailableLimitingMaterialWt,
+    ticketLimitingMaterialWt: watchedTicketLimitingMaterialWt,
+    originalStandardTotalBatchWt: watchedOriginalStandardTotalBatchWt,
+    targetBatchWeightForComponents: watchedTargetBatchWeightForComponents,
+    components: watchedComponents,
+  }), [
+    watchedAvailableLimitingMaterialWt,
+    watchedTicketLimitingMaterialWt,
+    watchedOriginalStandardTotalBatchWt,
+    watchedTargetBatchWeightForComponents,
+    watchedComponents,
+  ]);
+
+  const { getSnapshotUrl } = useLiveCalculatorSync(
+    'short-batch-adjustment',
+    liveSyncData,
+    (remoteData) => {
+      if (remoteData) {
+        reset(remoteData);
+      }
+    }
+  );
+
   const voiceResultText = calculatedAdjustedTotalBatchWeight !== null ? `The adjusted total batch weight is ${calculatedAdjustedTotalBatchWeight.toFixed(2)} units.` : undefined;
 
   return (
@@ -210,6 +235,7 @@ const ShortBatchAdjustmentCalculatorLogic: React.FC = () => {
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-8">
         <form onSubmit={handleSubmit(() => {})} className="space-y-8">
