@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import AppHeader from '@/components/layout/AppHeader';
 import { LiveBridgeProvider } from '@/context/LiveBridgeContext';
 import { LiveBridgeStatusBar } from '@/components/bridge/LiveBridgeStatusBar';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -36,7 +37,9 @@ export default function RootLayout({
             <AppHeader />
             <LiveBridgeStatusBar />
             <main className="flex-grow container mx-auto px-4 py-8 animate-slideUp">
-              {children}
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
             </main>
             <Toaster />
           </LiveBridgeProvider>

@@ -11,8 +11,15 @@ export function useLiveCalculatorSync<T extends Record<string, any>>(
   const { isConnected, syncCalculatorState, getCalculatorState } = useLiveBridge();
   const isUpdatingFromRemoteRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSyncedJsonRef = useRef<string>('');
+  
+  // Stable ref to avoid re-triggering effects when caller passes inline arrow functions
+  const onRemoteUpdateRef = useRef(onRemoteUpdate);
+  useEffect(() => {
+    onRemoteUpdateRef.current = onRemoteUpdate;
+  });
 
-  // 1. Broadcast local changes to peers (debounced)
+  // 1. Broadcast local changes to peers (debounced, avoids echo)
   useEffect(() => {
     if (!isConnected) return;
     if (isUpdatingFromRemoteRef.current) {
@@ -20,10 +27,19 @@ export function useLiveCalculatorSync<T extends Record<string, any>>(
       return;
     }
 
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(() => {
-      syncCalculatorState(slug, values);
-    }, 150);
+    try {
+      const currentJson = JSON.stringify(values);
+      // If no change from what we last synced, don't broadcast
+      if (currentJson === lastSyncedJsonRef.current) return;
+
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(() => {
+        lastSyncedJsonRef.current = currentJson;
+        syncCalculatorState(slug, values);
+      }, 150);
+    } catch {
+      // ignore serialization errors
+    }
 
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
@@ -33,10 +49,18 @@ export function useLiveCalculatorSync<T extends Record<string, any>>(
   // 2. Listen for remote sync events
   useEffect(() => {
     const handleLiveSync = (event: Event) => {
-      const customEvent = event as CustomEvent<{ slug: string; state: T }>;
-      if (customEvent.detail?.slug === slug && customEvent.detail?.state) {
-        isUpdatingFromRemoteRef.current = true;
-        onRemoteUpdate(customEvent.detail.state);
+      try {
+        const customEvent = event as CustomEvent<{ slug: string; state: T }>;
+        if (customEvent.detail?.slug === slug && customEvent.detail?.state) {
+          const remoteJson = JSON.stringify(customEvent.detail.state);
+          if (remoteJson === lastSyncedJsonRef.current) return; // already in sync
+
+          lastSyncedJsonRef.current = remoteJson;
+          isUpdatingFromRemoteRef.current = true;
+          onRemoteUpdateRef.current(customEvent.detail.state);
+        }
+      } catch (err) {
+        console.error('Error handling live sync:', err);
       }
     };
 
@@ -44,11 +68,19 @@ export function useLiveCalculatorSync<T extends Record<string, any>>(
       window.addEventListener('chemcalc-live-sync', handleLiveSync);
     }
 
-    // Check if there was cached state
-    const existing = getCalculatorState(slug);
-    if (existing) {
-      isUpdatingFromRemoteRef.current = true;
-      onRemoteUpdate(existing as T);
+    // Check if there was cached state once when slug changes
+    try {
+      const existing = getCalculatorState(slug);
+      if (existing) {
+        const existingJson = JSON.stringify(existing);
+        if (existingJson !== lastSyncedJsonRef.current) {
+          lastSyncedJsonRef.current = existingJson;
+          isUpdatingFromRemoteRef.current = true;
+          onRemoteUpdateRef.current(existing as T);
+        }
+      }
+    } catch (e) {
+      console.error('Error applying cached state:', e);
     }
 
     return () => {
@@ -56,7 +88,7 @@ export function useLiveCalculatorSync<T extends Record<string, any>>(
         window.removeEventListener('chemcalc-live-sync', handleLiveSync);
       }
     };
-  }, [slug, onRemoteUpdate, getCalculatorState]);
+  }, [slug, getCalculatorState]); // Stable dependencies - onRemoteUpdate is now safely inside onRemoteUpdateRef!
 
   // 3. Support URL Hash Snapshot (#snap=...)
   useEffect(() => {
@@ -67,14 +99,15 @@ export function useLiveCalculatorSync<T extends Record<string, any>>(
         const encoded = hash.replace('#snap=', '');
         const decoded = JSON.parse(decodeURIComponent(atob(encoded)));
         if (decoded && typeof decoded === 'object') {
+          lastSyncedJsonRef.current = JSON.stringify(decoded);
           isUpdatingFromRemoteRef.current = true;
-          onRemoteUpdate(decoded);
+          onRemoteUpdateRef.current(decoded);
         }
       }
     } catch (e) {
       // ignore invalid hash
     }
-  }, [onRemoteUpdate]);
+  }, []);
 
   // 4. Generate Shareable Snapshot URL
   const getSnapshotUrl = useCallback((): string => {

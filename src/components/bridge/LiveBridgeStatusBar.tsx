@@ -5,6 +5,7 @@ import { useLiveBridge } from '@/context/LiveBridgeContext';
 import { Button } from '@/components/ui/button';
 import { Copy, Check, Unlink, Radio, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export const LiveBridgeStatusBar: React.FC = () => {
   const { isConnected, roomCode, role, peerCount, disconnect } = useLiveBridge();
@@ -13,10 +14,10 @@ export const LiveBridgeStatusBar: React.FC = () => {
 
   if (!isConnected) return null;
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (typeof window === 'undefined') return;
     const url = `${window.location.origin}${window.location.pathname}?bridge=${roomCode}`;
-    navigator.clipboard.writeText(url);
+    await copyToClipboard(url);
     setCopied(true);
     toast({ title: "Link Copied!", description: "Live session URL copied to clipboard." });
     setTimeout(() => setCopied(false), 2000);

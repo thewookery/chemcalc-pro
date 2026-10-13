@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import VoiceAssistant from './VoiceAssistant';
 import { CALCULATORS, CATEGORIES } from '@/lib/calculators';
 import { LiveBridgeDialog } from '@/components/bridge/LiveBridgeDialog';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface CalculatorWrapperProps {
   title: string;
@@ -48,39 +49,38 @@ const CalculatorWrapper: React.FC<CalculatorWrapperProps> = ({
   const [copiedResults, setCopiedResults] = useState(false);
   const [copiedSnapshot, setCopiedSnapshot] = useState(false);
 
-  const handleCopyToClipboard = () => {
+  const handleCopyToClipboard = async () => {
     if (!resultsToCopy) return;
     const textToCopy = typeof resultsToCopy === 'function' ? resultsToCopy() : resultsToCopy;
-    navigator.clipboard
-      .writeText(textToCopy)
-      .then(() => {
-        setCopiedResults(true);
-        toast({
-          title: "Copied to clipboard!",
-          description: "Calculation results copied.",
-        });
-        setTimeout(() => setCopiedResults(false), 2000);
-      })
-      .catch(() => {
-        toast({
-          title: "Error",
-          description: "Could not copy results to clipboard.",
-          variant: "destructive",
-        });
+    const success = await copyToClipboard(textToCopy);
+    if (success) {
+      setCopiedResults(true);
+      toast({
+        title: "Copied to clipboard!",
+        description: "Calculation results copied.",
       });
+      setTimeout(() => setCopiedResults(false), 2000);
+    } else {
+      toast({
+        title: "Error",
+        description: "Could not copy results to clipboard.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleShareSnapshot = () => {
+  const handleShareSnapshot = async () => {
     if (!onShareSnapshot) return;
     const url = onShareSnapshot();
-    navigator.clipboard.writeText(url).then(() => {
+    const success = await copyToClipboard(url);
+    if (success) {
       setCopiedSnapshot(true);
       toast({
         title: "Share Link Generated!",
         description: "Anyone opening this link will see your exact inputs pre-filled.",
       });
       setTimeout(() => setCopiedSnapshot(false), 2500);
-    });
+    }
   };
 
   return (

@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { useLiveBridge } from '@/context/LiveBridgeContext';
 import { useToast } from '@/hooks/use-toast';
 import { Radio, Copy, Check, Users, PhoneCall, Loader2, Unlink } from 'lucide-react';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trigger }) => {
   const { isConnected, isConnecting, role, roomCode, peerCount, startHosting, joinRoom, disconnect } = useLiveBridge();
@@ -48,16 +49,16 @@ export const LiveBridgeDialog: React.FC<{ trigger?: React.ReactNode }> = ({ trig
     return `${origin}${pathname}?bridge=${roomCode}`;
   };
 
-  const copyInviteUrl = () => {
+  const copyInviteUrl = async () => {
     const url = getInviteUrl();
-    navigator.clipboard.writeText(url);
+    await copyToClipboard(url);
     setCopiedLink(true);
     toast({ title: "Link Copied!", description: "Send this link to your colleague to connect instantly." });
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  const copyRoomCode = () => {
-    navigator.clipboard.writeText(roomCode);
+  const copyRoomCode = async () => {
+    await copyToClipboard(roomCode);
     setCopiedCode(true);
     toast({ title: "Code Copied!", description: `Room code ${roomCode} copied.` });
     setTimeout(() => setCopiedCode(false), 2500);

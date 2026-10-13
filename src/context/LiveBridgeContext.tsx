@@ -40,6 +40,18 @@ function generateRandomCode(): string {
   return `${prefix}-${num}`;
 }
 
+function normalizePath(rawPath?: string | null): string {
+  if (!rawPath) return '/';
+  let p = rawPath;
+  if (p.startsWith('/chemcalc-pro')) {
+    p = p.slice('/chemcalc-pro'.length) || '/';
+  }
+  if (p.length > 1 && p.endsWith('/')) {
+    p = p.slice(0, -1);
+  }
+  return p.startsWith('/') ? p : `/${p}`;
+}
+
 export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const router = useRouter();
   const pathname = usePathname();
@@ -58,6 +70,7 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const peerRef = useRef<Peer | null>(null);
   const connectionsRef = useRef<DataConnection[]>([]);
   const isNavigatingFromPeerRef = useRef(false);
+  const hasAutoJoinedRef = useRef(false);
 
   // Broadcast to all active connections
   const broadcast = useCallback((type: BridgeMessage['type'], payload: any) => {
@@ -85,7 +98,8 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       isNavigatingFromPeerRef.current = false;
       return;
     }
-    broadcast('NAVIGATE', { pathname });
+    const cleanCurrent = normalizePath(pathname);
+    broadcast('NAVIGATE', { pathname: cleanCurrent });
   }, [pathname, isConnected, broadcast]);
 
   // Handle incoming message from peer
@@ -94,13 +108,19 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setLastMessage(msg);
 
       if (msg.type === 'NAVIGATE' && msg.payload?.pathname) {
-        if (msg.payload.pathname !== pathname) {
+        const targetPath = normalizePath(msg.payload.pathname);
+        const currentPath = normalizePath(pathname);
+        if (targetPath !== currentPath) {
           isNavigatingFromPeerRef.current = true;
-          router.push(msg.payload.pathname);
-          toast({
-            title: "Navigated with Co-Pilot",
-            description: `Switched to ${msg.payload.pathname.replace('/', '') || 'Home'}`,
-          });
+          try {
+            router.push(targetPath);
+            toast({
+              title: "Navigated with Co-Pilot",
+              description: `Switched to ${targetPath === '/' ? 'Home' : targetPath.slice(1)}`,
+            });
+          } catch (err) {
+            console.error('Failed to navigate via peer message:', err);
+          }
         }
       } else if (msg.type === 'SYNC_CALC' && msg.payload?.slug) {
         const { slug, state } = msg.payload;
@@ -116,11 +136,13 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       } else if (msg.type === 'SYNC_REQUEST') {
         // Send our current calculator state to the newcomer
         Object.entries(syncedStateRef.current).forEach(([slug, state]) => {
-          conn.send({
-            type: 'SYNC_CALC',
-            payload: { slug, state },
-            timestamp: Date.now(),
-          });
+          try {
+            conn.send({
+              type: 'SYNC_CALC',
+              payload: { slug, state },
+              timestamp: Date.now(),
+            });
+          } catch {}
         });
       }
     },
@@ -315,10 +337,11 @@ export const LiveBridgeProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Auto-join from URL parameter ?bridge=XYZ or ?room=XYZ
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || hasAutoJoinedRef.current) return;
     const urlParams = new URLSearchParams(window.location.search);
     const roomParam = urlParams.get('bridge') || urlParams.get('room');
     if (roomParam && !isConnected && !isConnecting) {
+      hasAutoJoinedRef.current = true;
       joinRoom(roomParam);
     }
   }, [isConnected, isConnecting, joinRoom]);
