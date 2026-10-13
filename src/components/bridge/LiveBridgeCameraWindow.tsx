@@ -44,27 +44,94 @@ export const LiveBridgeCameraWindow: React.FC = () => {
   const [windowSize, setWindowSize] = useState<WindowSize>('compact');
   const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
   const [photoZoom, setPhotoZoom] = useState(1);
+  const [isTrackMuted, setIsTrackMuted] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const pipVideoRef = useRef<HTMLVideoElement | null>(null);
+  const prevRemoteStreamRef = useRef<MediaStream | null>(null);
 
   const activeStream = remoteStream || localStream;
 
-  // Bind video element to active media stream
+  // Whenever isVideoWindowOpen is explicitly set to true from external buttons, un-minimize
   useEffect(() => {
-    if (videoRef.current) {
-      if (activeStream) {
-        videoRef.current.srcObject = activeStream;
-        videoRef.current.play().catch((err) => {
-          console.warn('Video auto-play interrupted:', err);
-        });
-      } else {
-        videoRef.current.srcObject = null;
-      }
+    if (isVideoWindowOpen) {
+      setIsMinimized(false);
     }
+  }, [isVideoWindowOpen]);
+
+  // When a new remote stream arrives from a colleague, auto-open and un-minimize the window
+  useEffect(() => {
+    if (remoteStream && !prevRemoteStreamRef.current) {
+      setIsMinimized(false);
+      setVideoWindowOpen(true);
+    }
+    prevRemoteStreamRef.current = remoteStream;
+  }, [remoteStream, setVideoWindowOpen]);
+
+  // Continuously bind activeStream to the video element without unmounting
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (activeStream) {
+      if (video.srcObject !== activeStream) {
+        video.srcObject = activeStream;
+      }
+      video.play().catch((err) => {
+        console.warn('Video auto-play interrupted:', err);
+      });
+    } else {
+      video.srcObject = null;
+    }
+  }, [activeStream, isMinimized, windowSize]);
+
+  // Keep playback resilient against background pausing or mobile sleep
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !activeStream) return;
+
+    const handleLoadedMetadata = () => {
+      video.play().catch(() => {});
+    };
+
+    const handlePause = () => {
+      if (activeStream && !video.ended) {
+        video.play().catch(() => {});
+      }
+    };
+
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('pause', handlePause);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('pause', handlePause);
+    };
   }, [activeStream]);
 
-  // Secondary Picture-In-Picture for self preview if both remote & local exist
+  // Track mute / unmute events on mobile devices (e.g. app switching or lock screen)
+  useEffect(() => {
+    if (!remoteStream) {
+      setIsTrackMuted(false);
+      return;
+    }
+
+    const videoTrack = remoteStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    const handleMute = () => setIsTrackMuted(true);
+    const handleUnmute = () => setIsTrackMuted(false);
+
+    videoTrack.addEventListener('mute', handleMute);
+    videoTrack.addEventListener('unmute', handleUnmute);
+
+    return () => {
+      videoTrack.removeEventListener('mute', handleMute);
+      videoTrack.removeEventListener('unmute', handleUnmute);
+    };
+  }, [remoteStream]);
+
+  // Secondary Picture-In-Picture for self preview if both remote & local streams exist
   useEffect(() => {
     if (pipVideoRef.current && remoteStream && localStream) {
       pipVideoRef.current.srcObject = localStream;
@@ -72,15 +139,15 @@ export const LiveBridgeCameraWindow: React.FC = () => {
     }
   }, [remoteStream, localStream]);
 
-  // Don't render anything if not connected or no active stream / window closed
+  // Do not render anything if Live Bridge is not connected, or if no camera is active and window was closed
   if (!isConnected || (!activeStream && !isVideoWindowOpen)) {
     return null;
   }
 
   // Capture high-resolution photo / freeze frame from live video
   const handleCaptureSnapshot = () => {
-    if (!videoRef.current) return;
     const video = videoRef.current;
+    if (!video) return;
 
     try {
       const canvas = document.createElement('canvas');
@@ -111,41 +178,63 @@ export const LiveBridgeCameraWindow: React.FC = () => {
     a.click();
   };
 
-  // Collapsed Floating Pill State
-  if (isMinimized) {
-    return (
-      <aside aria-label="Batch Ticket Camera" className="fixed bottom-4 right-4 z-50 animate-fadeIn">
-        <Button
-          onClick={() => setIsMinimized(false)}
-          className="shadow-2xl bg-slate-900/90 text-white hover:bg-slate-800 border border-emerald-500/40 rounded-full px-4 py-2.5 h-auto flex items-center gap-2.5 backdrop-blur group"
-        >
-          <span className="relative flex h-2.5 w-2.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </span>
-          <Camera className="h-4 w-4 text-emerald-400" />
-          <span className="text-xs font-semibold">
-            {remoteStream ? "Batch Ticket Feed" : "Your Camera (Sharing)"}
-          </span>
-          <ChevronUp className="h-4 w-4 text-slate-400 group-hover:text-white transition-transform" />
-        </Button>
-      </aside>
-    );
-  }
-
   // Size styling classes
   const sizeClasses = {
-    compact: 'w-[90vw] sm:w-[350px] h-[260px]',
-    expanded: 'w-[92vw] sm:w-[500px] h-[380px]',
-    fullscreen: 'fixed inset-4 sm:inset-8 z-50 w-auto h-auto',
+    compact: 'w-[92vw] sm:w-[360px] h-[270px]',
+    expanded: 'w-[94vw] sm:w-[520px] h-[400px]',
+    fullscreen: 'fixed inset-3 sm:inset-6 z-50 w-auto h-auto',
   }[windowSize];
 
   return (
     <>
-      {/* Floating Video Window */}
+      {/* 1. Collapsed Floating Pill State (Keeps stream alive in background when minimized) */}
+      {isMinimized && (
+        <aside
+          aria-label="Batch Ticket Camera Pill"
+          className="fixed bottom-4 right-4 z-50 animate-fadeIn flex items-center gap-1.5"
+        >
+          <Button
+            onClick={() => {
+              setIsMinimized(false);
+              setVideoWindowOpen(true);
+            }}
+            className="shadow-2xl bg-slate-900/95 text-white hover:bg-slate-800 border border-emerald-500/50 rounded-full px-4 py-2.5 h-auto flex items-center gap-2.5 backdrop-blur group"
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <Camera className="h-4 w-4 text-emerald-400" />
+            <span className="text-xs font-semibold">
+              {remoteStream ? "Batch Ticket Feed (Live)" : "Camera Sharing Active"}
+            </span>
+            <ChevronUp className="h-4 w-4 text-slate-400 group-hover:text-white transition-transform" />
+          </Button>
+
+          {/* Quick stop button if user is sharing and wants to turn off hardware */}
+          {isSharingCamera && (
+            <Button
+              onClick={() => {
+                stopCameraShare();
+                toast({ title: "Camera Stopped", description: "Camera sharing ended." });
+              }}
+              variant="destructive"
+              size="icon"
+              className="h-9 w-9 rounded-full shadow-lg border border-rose-500/40"
+              title="Stop camera sharing"
+            >
+              <CameraOff className="h-4 w-4" />
+            </Button>
+          )}
+        </aside>
+      )}
+
+      {/* 2. Floating Video Window (Always kept mounted in DOM so WebRTC stream sink never drops) */}
       <aside
         aria-label="Batch Ticket Camera"
-        className={`fixed bottom-4 right-4 z-50 flex flex-col bg-slate-950/95 text-white border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-200 ${sizeClasses}`}
+        className={`fixed bottom-4 right-4 z-50 flex flex-col bg-slate-950/95 text-white border border-slate-800 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md transition-all duration-200 ${sizeClasses} ${
+          isMinimized ? 'hidden pointer-events-none' : ''
+        }`}
       >
         {/* Header Bar */}
         <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-900/90 border-b border-slate-800/80 select-none">
@@ -155,7 +244,7 @@ export const LiveBridgeCameraWindow: React.FC = () => {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <span className="text-xs font-bold tracking-tight text-slate-200">
-              {remoteStream ? "Batch Ticket (Colleague)" : "Your Camera Feed"}
+              {remoteStream ? "Batch Ticket (Colleague Live)" : "Your Camera Feed"}
             </span>
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-emerald-500/40 text-emerald-400 font-mono">
               LIVE
@@ -175,30 +264,43 @@ export const LiveBridgeCameraWindow: React.FC = () => {
               title="Resize window"
               className="h-7 w-7 text-slate-400 hover:text-white hover:bg-slate-800"
             >
-              <Maximize2 className="h-3.5 w-3.5" />
+              {windowSize === 'fullscreen' ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </Button>
 
             {/* Minimize window to floating pill */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsMinimized(true)}
+              onClick={() => {
+                setIsMinimized(true);
+                if (isSharingCamera) {
+                  toast({
+                    title: "Camera Still Live",
+                    description: "Your camera is still sharing with your colleague. Tap the floating pill to reopen preview.",
+                  });
+                }
+              }}
               title="Minimize to floating pill"
               className="h-7 w-7 text-slate-400 hover:text-white hover:bg-slate-800"
             >
               <ChevronDown className="h-3.5 w-3.5" />
             </Button>
 
-            {/* Close / stop sharing */}
+            {/* Close / Hide Window (Minimizes without terminating stream so it never turns black) */}
             <Button
               variant="ghost"
               size="icon"
               onClick={() => {
-                if (isSharingCamera) stopCameraShare();
-                setVideoWindowOpen(false);
+                setIsMinimized(true);
+                if (isSharingCamera) {
+                  toast({
+                    title: "Preview Minimized",
+                    description: "Camera is still streaming to your colleague! Tap the green pill to view preview.",
+                  });
+                }
               }}
-              title="Close camera window"
-              className="h-7 w-7 text-rose-400 hover:text-white hover:bg-rose-900/60"
+              title="Hide window"
+              className="h-7 w-7 text-slate-400 hover:text-white hover:bg-slate-800"
             >
               <X className="h-3.5 w-3.5" />
             </Button>
@@ -207,24 +309,50 @@ export const LiveBridgeCameraWindow: React.FC = () => {
 
         {/* Video Canvas Container */}
         <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
-          {activeStream ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-contain"
-            />
-          ) : (
-            <div className="text-center p-6 space-y-2 text-slate-400">
-              <CameraOff className="h-8 w-8 mx-auto text-slate-500" />
-              <p className="text-xs">Waiting for video stream...</p>
+          {/* Main video element: Always present in DOM so WebRTC stream does not drop or freeze */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className={`w-full h-full object-contain ${activeStream ? '' : 'hidden'}`}
+          />
+
+          {/* Placeholder if no stream is currently flowing */}
+          {!activeStream && (
+            <div className="text-center p-6 space-y-3 text-slate-400">
+              <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                <CameraOff className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-200">No Active Camera Stream</p>
+                <p className="text-[11px] text-slate-400">Waiting for colleague to share camera...</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setVideoWindowOpen(false)}
+                className="text-xs border-slate-700 text-slate-300 hover:text-white"
+              >
+                Close Window
+              </Button>
             </div>
           )}
 
-          {/* Picture-in-picture for local stream when watching remote stream */}
+          {/* Mobile pause / track mute overlay */}
+          {isTrackMuted && activeStream && (
+            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center z-10">
+              <div className="animate-spin rounded-full h-7 w-7 border-2 border-emerald-400 border-t-transparent mb-2" />
+              <p className="text-xs font-semibold text-slate-200">Stream Temporarily Paused</p>
+              <p className="text-[11px] text-slate-400 max-w-xs">
+                Colleague may have switched apps or locked their screen. Resuming automatically when they return...
+              </p>
+            </div>
+          )}
+
+          {/* Picture-in-picture for self preview when watching remote stream */}
           {remoteStream && localStream && (
-            <div className="absolute top-2 right-2 w-24 h-16 bg-black rounded-lg border border-slate-700 overflow-hidden shadow-lg">
+            <div className="absolute top-2 right-2 w-24 h-16 bg-black rounded-lg border border-slate-700 overflow-hidden shadow-lg z-10">
               <video
                 ref={pipVideoRef}
                 autoPlay
@@ -240,7 +368,7 @@ export const LiveBridgeCameraWindow: React.FC = () => {
         </div>
 
         {/* Bottom Quick-Action Toolbar */}
-        <div className="flex items-center justify-between px-3 py-2 bg-slate-900/80 border-t border-slate-800/80 gap-2">
+        <div className="flex items-center justify-between px-3 py-2 bg-slate-900/90 border-t border-slate-800/80 gap-2">
           {/* Freeze Frame / Snap Photo Button */}
           <Button
             size="sm"
@@ -260,30 +388,33 @@ export const LiveBridgeCameraWindow: React.FC = () => {
                 size="sm"
                 onClick={switchCameraFacing}
                 className="h-8 px-2.5 text-xs border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 gap-1"
-                title={`Switch camera (currently: ${cameraFacingMode === 'environment' ? 'Back' : 'Front'})`}
+                title={`Switch camera (currently: ${cameraFacingMode === 'environment' ? 'Back Camera' : 'Front Camera'})`}
               >
                 <FlipHorizontal className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Flip</span>
               </Button>
             )}
 
-            {/* Toggle Camera Share */}
+            {/* Explicit Stop / Share Camera Controls */}
             {isSharingCamera ? (
               <Button
                 variant="destructive"
                 size="sm"
-                onClick={stopCameraShare}
-                className="h-8 px-2.5 text-xs gap-1"
+                onClick={() => {
+                  stopCameraShare();
+                  toast({ title: "Camera Stopped", description: "Stopped sharing camera feed." });
+                }}
+                className="h-8 px-2.5 text-xs gap-1 shadow-sm"
               >
                 <CameraOff className="h-3.5 w-3.5" />
-                <span>Stop</span>
+                <span>Stop Camera</span>
               </Button>
             ) : (
               <Button
                 variant="default"
                 size="sm"
                 onClick={() => startCameraShare('environment')}
-                className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
+                className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1 shadow-sm"
               >
                 <Camera className="h-3.5 w-3.5" />
                 <span>Share Camera</span>
@@ -293,7 +424,7 @@ export const LiveBridgeCameraWindow: React.FC = () => {
         </div>
       </aside>
 
-      {/* Snapshot / Freeze-Frame Modal (for inspecting handwritten batch tickets) */}
+      {/* 3. Snapshot / Freeze-Frame Modal (for inspecting handwritten batch tickets) */}
       {capturedPhotoUrl && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-fadeIn">
           {/* Modal Header */}
