@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 type PercentageMode = "percentOfValue" | "whatPercent";
 
@@ -32,6 +33,15 @@ const PercentageCalculatorPage: React.FC = () => {
   const [a2, setA2] = useState<string>(''); // Value (A)
   const [b2, setB2] = useState<string>(''); // Total Value (B)
   const [percent2, setPercent2] = useState<number | null>(null); // Result (%)
+
+  const liveData = useMemo(() => ({ mode, b1, c1, a2, b2 }), [mode, b1, c1, a2, b2]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('percentage', liveData, (remote) => {
+    if (remote.mode !== undefined) setMode(remote.mode);
+    if (remote.b1 !== undefined) setB1(remote.b1);
+    if (remote.c1 !== undefined) setC1(remote.c1);
+    if (remote.a2 !== undefined) setA2(remote.a2);
+    if (remote.b2 !== undefined) setB2(remote.b2);
+  });
 
   useEffect(() => {
     if (mode === "percentOfValue") {
@@ -87,6 +97,7 @@ const PercentageCalculatorPage: React.FC = () => {
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <Tabs value={mode} onValueChange={(value) => setMode(value as PercentageMode)} className="w-full">
         <TabsList className="grid w-full grid-cols-2">

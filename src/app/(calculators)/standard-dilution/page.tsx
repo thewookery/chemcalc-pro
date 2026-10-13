@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const StandardDilutionPage: React.FC = () => {
   const [m1, setM1] = useState<string>(''); 
@@ -23,6 +24,13 @@ const StandardDilutionPage: React.FC = () => {
   const [v2, setV2] = useState<string>(''); 
   const [v1, setV1] = useState<number | null>(null); 
   const [waterToAdd, setWaterToAdd] = useState<number | null>(null); 
+
+  const liveData = useMemo(() => ({ m1, m2, v2 }), [m1, m2, v2]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('standard-dilution', liveData, (remote) => {
+    if (remote.m1 !== undefined) setM1(remote.m1);
+    if (remote.m2 !== undefined) setM2(remote.m2);
+    if (remote.v2 !== undefined) setV2(remote.v2);
+  });
 
   useEffect(() => {
     const stockConc = parseFloat(m1);
@@ -70,6 +78,7 @@ Water/Diluent to Add: ${waterToAdd.toFixed(4)}`;
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

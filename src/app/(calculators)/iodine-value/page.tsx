@@ -16,12 +16,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const IodineValueCalculatorPage: React.FC = () => {
   const [blank, setBlank] = useState<string>('');
   const [sample, setSample] = useState<string>('');
   const [sampleWeight, setSampleWeight] = useState<string>('');
   const [iodineValue, setIodineValue] = useState<number | null>(null);
+
+  const liveData = useMemo(() => ({ blank, sample, sampleWeight }), [blank, sample, sampleWeight]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('iodine-value', liveData, (remote) => {
+    if (remote.blank !== undefined) setBlank(remote.blank);
+    if (remote.sample !== undefined) setSample(remote.sample);
+    if (remote.sampleWeight !== undefined) setSampleWeight(remote.sampleWeight);
+  });
 
   const FACTOR = 1.27; 
 
@@ -67,6 +75,7 @@ Iodine Value: ${iodineValue.toFixed(3)}`;
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

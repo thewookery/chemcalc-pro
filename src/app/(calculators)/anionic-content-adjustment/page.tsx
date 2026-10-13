@@ -16,12 +16,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const AnionicContentAdjustmentPage: React.FC = () => {
   const [currentAnionic, setCurrentAnionic] = useState<string>('');
   const [desiredAnionic, setDesiredAnionic] = useState<string>('');
   const [batchWeight, setBatchWeight] = useState<string>('');
   const [waterToAdd, setWaterToAdd] = useState<number | null>(null);
+
+  const liveData = useMemo(() => ({ currentAnionic, desiredAnionic, batchWeight }), [currentAnionic, desiredAnionic, batchWeight]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('anionic-content-adjustment', liveData, (remote) => {
+    if (remote.currentAnionic !== undefined) setCurrentAnionic(remote.currentAnionic);
+    if (remote.desiredAnionic !== undefined) setDesiredAnionic(remote.desiredAnionic);
+    if (remote.batchWeight !== undefined) setBatchWeight(remote.batchWeight);
+  });
 
   useEffect(() => {
     const current = parseFloat(currentAnionic);
@@ -66,6 +74,7 @@ Water to Add: ${waterToAdd.toFixed(4)} lbs`;
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

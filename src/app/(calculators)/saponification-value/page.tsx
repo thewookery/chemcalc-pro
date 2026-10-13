@@ -16,12 +16,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const SaponificationValueCalculatorPage: React.FC = () => {
   const [blankTitrated, setBlankTitrated] = useState<string>('');
   const [sampleTitrate, setSampleTitrate] = useState<string>('');
   const [sampleWeight, setSampleWeight] = useState<string>('');
   const [sapValue, setSapValue] = useState<number | null>(null);
+
+  const liveData = useMemo(() => ({ blankTitrated, sampleTitrate, sampleWeight }), [blankTitrated, sampleTitrate, sampleWeight]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('saponification-value', liveData, (remote) => {
+    if (remote.blankTitrated !== undefined) setBlankTitrated(remote.blankTitrated);
+    if (remote.sampleTitrate !== undefined) setSampleTitrate(remote.sampleTitrate);
+    if (remote.sampleWeight !== undefined) setSampleWeight(remote.sampleWeight);
+  });
 
   useEffect(() => {
     const blank = parseFloat(blankTitrated);
@@ -62,6 +70,7 @@ Saponification Value: ${sapValue.toFixed(3)}`;
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

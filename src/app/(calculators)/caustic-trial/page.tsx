@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 interface CausticTrialResult {
   percentage: number;
@@ -31,6 +32,11 @@ const CAUSTIC_PERCENTAGES = [
 const CausticTrialCalculatorPage: React.FC = () => {
   const [trialWeight, setTrialWeight] = useState<string>('');
   const [results, setResults] = useState<CausticTrialResult[]>([]);
+
+  const liveData = useMemo(() => ({ trialWeight }), [trialWeight]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('caustic-trial', liveData, (remote) => {
+    if (remote.trialWeight !== undefined) setTrialWeight(remote.trialWeight);
+  });
 
   useEffect(() => {
     const wt = parseFloat(trialWeight);
@@ -64,6 +70,7 @@ const CausticTrialCalculatorPage: React.FC = () => {
       description="Calculate caustic amounts for trial solutions based on trial weight and predefined percentages (0.08% to 0.30%)."
       formula={formula}
       resultsToCopy={resultsToCopy}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

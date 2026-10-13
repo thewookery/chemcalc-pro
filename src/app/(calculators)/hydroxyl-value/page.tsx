@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const HydroxylValueCalculatorPage: React.FC = () => {
   const [blank, setBlank] = useState<string>('');
@@ -23,6 +24,14 @@ const HydroxylValueCalculatorPage: React.FC = () => {
   const [weight, setWeight] = useState<string>('');
   const [acidValue, setAcidValue] = useState<string>('');
   const [hydroxylValue, setHydroxylValue] = useState<number | null>(null);
+
+  const liveData = useMemo(() => ({ blank, sample, weight, acidValue }), [blank, sample, weight, acidValue]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('hydroxyl-value', liveData, (remote) => {
+    if (remote.blank !== undefined) setBlank(remote.blank);
+    if (remote.sample !== undefined) setSample(remote.sample);
+    if (remote.weight !== undefined) setWeight(remote.weight);
+    if (remote.acidValue !== undefined) setAcidValue(remote.acidValue);
+  });
 
   useEffect(() => {
     const b = parseFloat(blank);
@@ -67,6 +76,7 @@ Hydroxyl Value: ${hydroxylValue.toFixed(3)}`;
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput

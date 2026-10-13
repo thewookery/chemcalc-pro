@@ -16,12 +16,19 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, AlertTriangle } from "lucide-react";
+import { useLiveCalculatorSync } from '@/hooks/useLiveCalculatorSync';
 
 const SodaAshTrialsCalculatorPage: React.FC = () => {
   const [acidValue, setAcidValue] = useState<string>('');
   const [batchWeight, setBatchWeight] = useState<string>('');
   const [sodaAshAmount, setSodaAshAmount] = useState<number | null>(null);
   const [isMinimumApplied, setIsMinimumApplied] = useState<boolean>(false);
+
+  const liveData = useMemo(() => ({ acidValue, batchWeight }), [acidValue, batchWeight]);
+  const { getSnapshotUrl } = useLiveCalculatorSync('soda-ash-trials', liveData, (remote) => {
+    if (remote.acidValue !== undefined) setAcidValue(remote.acidValue);
+    if (remote.batchWeight !== undefined) setBatchWeight(remote.batchWeight);
+  });
 
   const MINIMUM_ADD_AMOUNT = 500;
 
@@ -69,6 +76,7 @@ const SodaAshTrialsCalculatorPage: React.FC = () => {
       resultsToCopy={resultsToCopy}
       voiceConfig={voiceConfig}
       voiceResultText={voiceResultText}
+      onShareSnapshot={getSnapshotUrl}
     >
       <div className="space-y-4">
         <CommonInput
